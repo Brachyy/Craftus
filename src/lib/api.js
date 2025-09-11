@@ -17,6 +17,25 @@ export async function apiGET(path, setDebugUrl, setDebugErr) {
   return res.json();
 }
 
+export async function fetchRecipeMetaForItem(resultItemId, setDebugUrl, setDebugErr) {
+  const q = `/recipes?$limit=1&resultItemId=${encodeURIComponent(resultItemId)}`;
+  const data = await apiGET(q, setDebugUrl, setDebugErr);
+  const arr = Array.isArray(data) ? data : data?.data ?? [];
+  const r = arr[0];
+  if (!r) return null;
+
+  const jobId =
+    r.professionId ?? r.jobId ?? r.skill?.jobId ?? r.skill?.professionId ?? r?.skillId ?? null;
+  const levelRequired =
+    r.jobLevel ?? r.level ?? r.requiredJobLevel ?? r.skillLevel ?? null;
+
+  return {
+    jobId: jobId != null ? String(jobId) : null,
+    levelRequired: levelRequired != null ? Number(levelRequired) : null,
+  };
+}
+
+
 export async function tryFetchRecipesForItem(ankamaId, setDebugUrl, setDebugErr) {
   const variants = [
     `?resultId=${ankamaId}`,
