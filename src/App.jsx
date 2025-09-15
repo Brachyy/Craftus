@@ -4,7 +4,7 @@ import SearchBar from "./components/SearchBar";
 import JobSelect from "./components/JobSelect";
 import ItemCard from "./components/ItemCard";
 import ComparisonTable from "./components/ComparisonTable";
-import ShoppingList from "./components/ShoppingList"; // ⬅️ shopping list
+import ShoppingList from "./components/ShoppingList";
 
 import { itemAnkamaId, itemImage, itemLevel, itemName } from "./lib/utils";
 import {
@@ -73,14 +73,6 @@ function fromBase64Url(b64url) {
   return decodeURIComponent(escape(s));
 }
 
-// --------- helper entier kamas ----------
-function toInt(v) {
-  if (v === "" || v == null) return undefined;
-  const n = Number(v);
-  if (!Number.isFinite(n)) return undefined;
-  return Math.round(n);
-}
-
 export default function App() {
   // Recherche
   const [query, setQuery] = useState("");
@@ -125,6 +117,9 @@ export default function App() {
   // Types d’objet & classes
   const [itemTypesMap, setItemTypesMap] = useState({});
   const [breeds, setBreeds] = useState([]);
+
+  // Pré-remplissage différé (après restauration / ouverture lien)
+  const [pendingPrefill, setPendingPrefill] = useState(false);
 
   // Charger types + classes
   useEffect(() => {
@@ -233,16 +228,16 @@ export default function App() {
       job: raw.job || null,
     };
 
-    // Pré-remplir avec les prix communautaires (si existants) — ENTIER
+    // Pré-remplir avec les prix communautaires (si existants)
     try {
       const [sellDoc, ...ingDocs] = await Promise.all([
         getCommunityPrice(PRICE_KIND.SELL, id),
         ...ingredients.map((ing) => getCommunityPrice(PRICE_KIND.ING, ing.ankamaId)),
       ]);
-      if (sellDoc?.lastPrice != null) base.sellPrice = Math.round(Number(sellDoc.lastPrice));
+      if (sellDoc?.lastPrice != null) base.sellPrice = Number(sellDoc.lastPrice);
       base.ingredients = base.ingredients.map((ing, idx) => {
         const d = ingDocs[idx];
-        return d?.lastPrice != null ? { ...ing, unitPrice: Math.round(Number(d.lastPrice)) } : ing;
+        return d?.lastPrice != null ? { ...ing, unitPrice: Number(d.lastPrice) } : ing;
       });
     } catch (e) {
       console.warn("[prefill] community price fetch failed", e);
@@ -253,7 +248,7 @@ export default function App() {
     setSuggestions([]);
   }
 
-  // Rafraîchir tous les prix depuis la BDD communautaire (écrase les inputs) — ENTIER
+  // Rafraîchir tous les prix depuis la BDD communautaire (écrase les inputs)
   async function refreshCommunityPricesForAll() {
     if (!items.length) return;
     try {
@@ -263,7 +258,7 @@ export default function App() {
 
           try {
             const d = await getCommunityPrice(PRICE_KIND.SELL, copy.ankamaId);
-            if (d?.lastPrice != null) copy.sellPrice = Math.round(Number(d.lastPrice));
+            if (d?.lastPrice != null) copy.sellPrice = Number(d.lastPrice);
           } catch (e) {
             console.warn("[refresh] sell", { itemId: copy.ankamaId, e });
           }
@@ -272,7 +267,7 @@ export default function App() {
             const ing = copy.ingredients[i];
             try {
               const d = await getCommunityPrice(PRICE_KIND.ING, ing.ankamaId);
-              if (d?.lastPrice != null) ing.unitPrice = Math.round(Number(d.lastPrice));
+              if (d?.lastPrice != null) ing.unitPrice = Number(d.lastPrice);
             } catch (e) {
               console.warn("[refresh] ing", { ingId: ing.ankamaId, e });
             }
@@ -286,9 +281,9 @@ export default function App() {
     }
   }
 
-  // Mises à jour inputs — ENTIER
+  // Mises à jour inputs
   const updateIngredientPrice = (itemKey, ingId, price) => {
-    const val = price === "" || price == null ? undefined : Math.max(0, Math.round(Number(price)));
+    const val = price === "" || price == null ? undefined : Number(price);
     setItems((prev) =>
       prev.map((it) =>
         it.key !== itemKey
@@ -307,7 +302,7 @@ export default function App() {
       prev.map((it) =>
         it.key !== itemKey
           ? it
-          : { ...it, sellPrice: price === "" || price == null ? undefined : Math.max(0, Math.round(Number(price))) }
+          : { ...it, sellPrice: price === "" || price == null ? undefined : Number(price) }
       )
     );
   const updateCraftCount = (itemKey, count) =>
@@ -327,13 +322,13 @@ export default function App() {
     setSessionName(null);
   };
 
-  // Commit vers BDD communautaire au blur — ENTIER
+  // Commit vers BDD communautaire au blur
   async function commitIngredientPrice(itemKey, ingId) {
     const it = items.find((x) => x.key === itemKey);
     if (!it) return;
     const ing = it.ingredients.find((g) => g.ankamaId === ingId);
     if (!ing) return;
-    const v = Math.round(Number(ing.unitPrice));
+    const v = Number(ing.unitPrice);
     if (!Number.isFinite(v) || v < 0) return;
     if (!auth.currentUser) {
       console.warn("[commit] ignoré: utilisateur non connecté");
@@ -344,7 +339,7 @@ export default function App() {
   async function commitSellPrice(itemKey) {
     const it = items.find((x) => x.key === itemKey);
     if (!it) return;
-    const v = Math.round(Number(it.sellPrice));
+    const v = Number(it.sellPrice);
     if (!Number.isFinite(v) || v < 0) return;
     if (!auth.currentUser) {
       console.warn("[commit] ignoré: utilisateur non connecté");
@@ -380,10 +375,8 @@ export default function App() {
     setSort(snap.sort || { key: "gain", dir: "desc" });
     setJobId(snap.filters?.jobId || "");
     setEquipmentOnly(!!snap.filters?.equipmentOnly);
-    // Ecrase après chargement → recharge les PRIX depuis la BDD
-    setTimeout(() => {
-      refreshCommunityPricesForAll();
-    }, 0);
+    // Demande un pré-remplissage juste après montage des items
+    setPendingPrefill(true);
   }
 
   // --------- Partage via lien & JSON ----------
@@ -394,12 +387,22 @@ export default function App() {
     try {
       const json = fromBase64Url(data);
       const snap = JSON.parse(json);
-      restoreFromSnapshot(snap); // déclenchera refreshCommunityPricesForAll()
+      restoreFromSnapshot(snap);
     } catch (e) {
       console.warn("Lien de partage invalide.", e);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Effect qui déclenche le pré-remplissage communautaire une fois les items posés
+  useEffect(() => {
+    if (!pendingPrefill) return;
+    (async () => {
+      await Promise.resolve(); // laisse React appliquer setItems
+      await refreshCommunityPricesForAll();
+      setPendingPrefill(false);
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingPrefill]);
 
   async function shareByLink() {
     try {
@@ -428,7 +431,7 @@ export default function App() {
     if (!txt) return;
     try {
       const snap = JSON.parse(txt);
-      restoreFromSnapshot(snap); // déclenchera refreshCommunityPricesForAll()
+      restoreFromSnapshot(snap);
       alert("Session chargée !");
     } catch {
       alert("JSON invalide.");
@@ -643,7 +646,7 @@ export default function App() {
           setCurrentSessionId(id);
           setSessionName(name || null);
           setSessionIconUrl(icon?.url || null);
-          restoreFromSnapshot(data);
+          restoreFromSnapshot(data); // => pendingPrefill = true -> fetch communautaire auto
         }}
       />
     </div>

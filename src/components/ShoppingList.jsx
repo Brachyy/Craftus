@@ -67,7 +67,11 @@ export default function ShoppingList({
     const idx = list.indexOf(current);
     if (idx === -1) return;
     const next = list[idx + dir];
-    if (next) next.focus();
+    if (next) {
+      next.focus();
+      // sélectionne aussi le prochain champ pour accélérer la saisie en série
+      requestAnimationFrame(() => next.select && next.select());
+    }
   };
 
   // propagation prix unitaire (entier)
@@ -107,10 +111,13 @@ export default function ShoppingList({
     if (!q) return;
     const n = Number(raw);
     if (!Number.isFinite(n)) return;
-    const unit = Math.max(0, Math.round(n / q));
+    const unit = Math.max(0, Math.round(n / q)); // arrondi entier
     propagateUnit(ingId, unit);
     commitOnce(ingId);
   };
+
+  // util pour sélectionner tout le contenu au focus
+  const selectAll = (e) => requestAnimationFrame(() => e.target.select());
 
   return (
     <div className={`rounded-2xl border ${colors.border} ${colors.panel} p-4`}>
@@ -132,7 +139,7 @@ export default function ShoppingList({
             </tr>
           </thead>
           <tbody>
-            {rows.map((r, i) => {
+            {rows.map((r) => {
               const unitRounded = Math.max(0, Math.round(r.unitPrice ?? 0));
               const derivedTotal = unitRounded * (r.qty || 0);
               const totalValue =
@@ -206,6 +213,7 @@ export default function ShoppingList({
                       inputMode="numeric"
                       className="h-9 w-36 rounded-lg bg-[#1b1f26] border border-white/10 px-2 text-sm"
                       value={Number.isFinite(unitRounded) ? unitRounded : ""}
+                      onFocus={selectAll}
                       onChange={(e) => {
                         const n = Number(e.target.value);
                         const unit = Number.isFinite(n) ? Math.max(0, Math.round(n)) : "";
@@ -214,7 +222,6 @@ export default function ShoppingList({
                       onBlur={() => commitOnce(r.id)}
                       onKeyDown={(e) => {
                         if (e.key === "Tab") {
-                          // restreint le Tab à la colonne "unitaire"
                           e.preventDefault();
                           moveFocus(unitRefs.current, e.currentTarget, e.shiftKey ? -1 : 1);
                         }
@@ -230,10 +237,12 @@ export default function ShoppingList({
                       inputMode="numeric"
                       className="h-9 w-40 rounded-lg bg-[#1b1f26] border border-white/10 px-2 text-sm"
                       value={totalValue}
-                      onFocus={() => {
+                      onFocus={(e) => {
                         if (!Object.prototype.hasOwnProperty.call(totalDrafts, r.id)) {
                           startTotalEdit(r.id, derivedTotal);
                         }
+                        // sélectionne tout le contenu pour saisie rapide
+                        selectAll(e);
                       }}
                       onChange={(e) => changeTotalDraft(r.id, e.target.value)}
                       onBlur={() => commitTotalDraft(r.id, r.qty)}

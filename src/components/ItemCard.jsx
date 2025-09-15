@@ -13,7 +13,6 @@ export default function ItemCard({
   onCommitSellPrice,
 }) {
   const [sticky, setSticky] = useState(null);
-  // sticky = { kind: PRICE_KIND, id: number, title: string }
 
   const openSticky = (kind, id, title) => setSticky({ kind, id, title });
   const closeSticky = () => setSticky(null);
@@ -21,9 +20,7 @@ export default function ItemCard({
   // Échap pour fermer le graphe fixe
   useEffect(() => {
     if (!sticky) return;
-    const onKey = (e) => {
-      if (e.key === "Escape") closeSticky();
-    };
+    const onKey = (e) => { if (e.key === "Escape") closeSticky(); };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [sticky]);
@@ -45,12 +42,14 @@ export default function ItemCard({
   const gain = revenueNet - investment;
   const coeff = investment > 0 ? revenueNet / investment : null;
 
+  const selectAll = (e) => requestAnimationFrame(() => e.target.select());
+
   return (
     <div className={`rounded-2xl border ${colors.border} ${colors.panel} p-4`}>
       {/* HEADER */}
       <div className="flex items-start justify-between gap-3 mb-3">
         <div className="flex items-start gap-3 min-w-0">
-          {/* clic souris OK, mais ignoré par Tab */}
+          {/* Image cliquable (non focusable au Tab) */}
           <button
             type="button"
             tabIndex={-1}
@@ -77,7 +76,7 @@ export default function ItemCard({
 
           <div className="min-w-0">
             <div className="text-lg font-semibold truncate">
-              {/* clic souris OK, mais ignoré par Tab */}
+              {/* Titre cliquable (non focusable au Tab) */}
               <button
                 type="button"
                 tabIndex={-1}
@@ -142,6 +141,7 @@ export default function ItemCard({
             step="1"
             min="0"
             value={it.sellPrice ?? ""}
+            onFocus={selectAll}
             onChange={(e) => onUpdateSellPrice?.(it.key, toInt(e.target.value))}
             onBlur={() => {
               if (onCommitSellPrice && it.sellPrice != null && Number.isFinite(Number(it.sellPrice))) {
@@ -165,6 +165,7 @@ export default function ItemCard({
               min="1"
               className="h-10 w-full rounded-xl bg-[#1b1f26] border border-white/10 px-3"
               value={craftCount}
+              onFocus={selectAll}
               onChange={(e) => onUpdateCraftCount?.(it.key, toInt(e.target.value) ?? 1)}
             />
             <div className="flex items-center gap-1">
@@ -193,7 +194,7 @@ export default function ItemCard({
         <div className="space-y-2">
           {(it.ingredients || []).map((ing) => (
             <div key={ing.ankamaId} className="flex items-center gap-3">
-              {/* clic souris OK, mais ignoré par Tab */}
+              {/* Image cliquable (non focusable au Tab) */}
               <button
                 type="button"
                 tabIndex={-1}
@@ -219,7 +220,7 @@ export default function ItemCard({
               </button>
 
               <div className="min-w-0 flex-1">
-                {/* clic souris OK, mais ignoré par Tab */}
+                {/* Nom cliquable (non focusable au Tab) */}
                 <button
                   type="button"
                   tabIndex={-1}
@@ -257,6 +258,7 @@ export default function ItemCard({
                   min="0"
                   className="h-9 w-full rounded-lg bg-[#1b1f26] border border-white/10 px-2 text-sm"
                   value={ing.unitPrice ?? ""}
+                  onFocus={selectAll}
                   onChange={(e) => onUpdateIngredientPrice?.(it.key, ing.ankamaId, toInt(e.target.value))}
                   onBlur={() => {
                     if (onCommitIngredientPrice && ing.unitPrice != null && Number.isFinite(Number(ing.unitPrice))) {
@@ -271,7 +273,7 @@ export default function ItemCard({
       </div>
 
       {/* FOOTER */}
-      <div className="grid grid-cols-1 md-grid-cols-3 md:grid-cols-3 gap-3 mt-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-4">
         <div className="rounded-xl bg-[#151A22] border border-white/10 p-3">
           <div className="text-xs text-slate-400">Investissement</div>
           <div className="text-lg font-semibold">{currency(investment)}</div>
@@ -298,7 +300,6 @@ export default function ItemCard({
         <div
           className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
           onClick={(e) => {
-            // clic en dehors de la carte => ferme
             if (e.target === e.currentTarget) closeSticky();
           }}
         >
