@@ -1,5 +1,4 @@
-// src/components/ShoppingList.jsx
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { colors } from "../theme/colors";
 import { currency } from "../lib/utils";
 import PriceHistoryHover, { PRICE_KIND } from "./PriceHistoryHover";
@@ -9,7 +8,19 @@ export default function ShoppingList({
   onUpdateIngredientPrice,
   onCommitIngredientPrice,
 }) {
-  // Brouillons pour "Prix total" saisi par l'utilisateur (clé = ingId)
+  // Overlay graphe "statique"
+  const [sticky, setSticky] = useState(null);
+  const openSticky = (kind, id, title) => setSticky({ kind, id, title });
+  const closeSticky = () => setSticky(null);
+
+  useEffect(() => {
+    if (!sticky) return;
+    const onKey = (e) => e.key === "Escape" && closeSticky();
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [sticky]);
+
+  // Brouillons pour "Prix total"
   const [totalDrafts, setTotalDrafts] = useState({});
 
   const rows = useMemo(() => {
@@ -20,12 +31,9 @@ export default function ShoppingList({
         const key = String(ing.ankamaId);
         const prev = map.get(key);
         const qty = (prev?.qty || 0) + (ing.qty || 0) * mult;
-
-        // garde la première valeur unitaire connue si existante
         const unitPrice =
           prev?.unitPrice ??
           (Number.isFinite(Number(ing.unitPrice)) ? Number(ing.unitPrice) : undefined);
-
         map.set(key, {
           id: ing.ankamaId,
           name: ing.name,
@@ -47,7 +55,22 @@ export default function ShoppingList({
     0
   );
 
-  // propage un prix unitaire arrondi à l'entier vers toutes les cartes où l'ingrédient est utilisé
+  // refs pour navigation au Tab colonne par colonne
+  const unitRefs = useRef([]);
+  const totalRefs = useRef([]);
+  unitRefs.current = [];
+  totalRefs.current = [];
+  const setUnitRef = (el) => el && unitRefs.current.push(el);
+  const setTotalRef = (el) => el && totalRefs.current.push(el);
+
+  const moveFocus = (list, current, dir) => {
+    const idx = list.indexOf(current);
+    if (idx === -1) return;
+    const next = list[idx + dir];
+    if (next) next.focus();
+  };
+
+  // propagation prix unitaire (entier)
   const propagateUnit = (ingId, unitVal) => {
     let v;
     if (unitVal === "" || unitVal == null) {
@@ -61,14 +84,12 @@ export default function ShoppingList({
       if (line) onUpdateIngredientPrice(it.key, ingId, v);
     }
   };
-
-  // ne commite qu'une fois (prend le premier item qui contient cet ingrédient)
   const commitOnce = (ingId) => {
     const it = items.find((it) => it.ingredients.some((x) => x.ankamaId === ingId));
     if (it) onCommitIngredientPrice?.(it.key, ingId);
   };
 
-  // Gestion des brouillons "prix total"
+  // gestion brouillons "total"
   const startTotalEdit = (ingId, currentTotal) => {
     setTotalDrafts((d) => ({ ...d, [ingId]: String(currentTotal ?? "") }));
   };
@@ -83,11 +104,9 @@ export default function ShoppingList({
       return copy;
     });
     const q = Number(qty || 0);
-    if (!q) return; // rien à faire si pas de quantité
+    if (!q) return;
     const n = Number(raw);
     if (!Number.isFinite(n)) return;
-
-    // Convertit total -> unitaire (arrondi entier)
     const unit = Math.max(0, Math.round(n / q));
     propagateUnit(ingId, unit);
     commitOnce(ingId);
@@ -98,7 +117,7 @@ export default function ShoppingList({
       <div className="flex items-center justify-between mb-3">
         <h2 className="text-lg font-semibold">Shopping List</h2>
         <div className="text-xs text-slate-400">
-          Modifie “unitaire” (live) ou “total” (validé au relâchement) : tout se propage automatiquement.
+          Tab passe au prochain champ de la colonne. Échap pour fermer un graphe fixe.
         </div>
       </div>
 
@@ -113,7 +132,7 @@ export default function ShoppingList({
             </tr>
           </thead>
           <tbody>
-            {rows.map((r) => {
+            {rows.map((r, i) => {
               const unitRounded = Math.max(0, Math.round(r.unitPrice ?? 0));
               const derivedTotal = unitRounded * (r.qty || 0);
               const totalValue =
@@ -123,47 +142,66 @@ export default function ShoppingList({
 
               return (
                 <tr key={r.id} className="border-b border-white/5 align-top">
-                  {/* Ingrédient : pas de truncate, on laisse passer sur plusieurs lignes */}
+                  {/* Ingrédient : clic souris pour graphe, ignoré par Tab */}
                   <td className="py-2 pr-2">
                     <div className="flex items-start gap-2">
-                      <PriceHistoryHover
-                        kind={PRICE_KIND.ING}
-                        id={r.id}
-                        title={`Évolution · ${r.name}`}
-                        width={420}
-                        height={220}
-                        position="cursor"
+                      <button
+                        type="button"
+                        tabIndex={-1}
+                        aria-hidden="true"
+                        onClick={() => openSticky(PRICE_KIND.ING, r.id, `Évolution · ${r.name}`)}
+                        className="shrink-0"
+                        title="Voir l'historique de prix"
                       >
-                        <img
-                          src={r.img}
-                          alt=""
-                          className="w-6 h-6 rounded bg-black/20 object-contain shrink-0 mt-0.5"
-                        />
-                      </PriceHistoryHover>
+                        <PriceHistoryHover
+                          kind={PRICE_KIND.ING}
+                          id={r.id}
+                          title={`Évolution · ${r.name}`}
+                          width={420}
+                          height={220}
+                          position="cursor"
+                        >
+                          <img
+                            src={r.img}
+                            alt=""
+                            className="w-6 h-6 rounded bg-black/20 object-contain shrink-0 mt-0.5"
+                          />
+                        </PriceHistoryHover>
+                      </button>
 
-                      <PriceHistoryHover
-                        kind={PRICE_KIND.ING}
-                        id={r.id}
-                        title={`Évolution · ${r.name}`}
-                        width={420}
-                        height={220}
-                        position="cursor"
+                      <button
+                        type="button"
+                        tabIndex={-1}
+                        aria-hidden="true"
+                        onClick={() => openSticky(PRICE_KIND.ING, r.id, `Évolution · ${r.name}`)}
+                        className="text-left"
+                        title="Voir l'historique de prix"
                       >
-                        <span className="leading-tight cursor-default group break-words">
-                          <span className="group-hover:font-semibold transition">
-                            {r.name}
+                        <PriceHistoryHover
+                          kind={PRICE_KIND.ING}
+                          id={r.id}
+                          title={`Évolution · ${r.name}`}
+                          width={420}
+                          height={220}
+                          position="cursor"
+                        >
+                          <span className="leading-tight cursor-default group break-words">
+                            <span className="group-hover:font-semibold transition">
+                              {r.name}
+                            </span>
                           </span>
-                        </span>
-                      </PriceHistoryHover>
+                        </PriceHistoryHover>
+                      </button>
                     </div>
                   </td>
 
                   {/* Quantité totale */}
                   <td className="py-2 pr-2 text-slate-300">{r.qty}</td>
 
-                  {/* Prix unitaire (entier, propagation live) */}
+                  {/* Prix unitaire */}
                   <td className="py-2 pr-2">
                     <input
+                      ref={setUnitRef}
                       type="number"
                       inputMode="numeric"
                       className="h-9 w-36 rounded-lg bg-[#1b1f26] border border-white/10 px-2 text-sm"
@@ -174,12 +212,20 @@ export default function ShoppingList({
                         propagateUnit(r.id, unit);
                       }}
                       onBlur={() => commitOnce(r.id)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Tab") {
+                          // restreint le Tab à la colonne "unitaire"
+                          e.preventDefault();
+                          moveFocus(unitRefs.current, e.currentTarget, e.shiftKey ? -1 : 1);
+                        }
+                      }}
                     />
                   </td>
 
-                  {/* Prix total (brouillon UI, propagation au blur uniquement) */}
+                  {/* Prix total (brouillon) */}
                   <td className="py-2 pr-2">
                     <input
+                      ref={setTotalRef}
                       type="number"
                       inputMode="numeric"
                       className="h-9 w-40 rounded-lg bg-[#1b1f26] border border-white/10 px-2 text-sm"
@@ -191,6 +237,12 @@ export default function ShoppingList({
                       }}
                       onChange={(e) => changeTotalDraft(r.id, e.target.value)}
                       onBlur={() => commitTotalDraft(r.id, r.qty)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Tab") {
+                          e.preventDefault();
+                          moveFocus(totalRefs.current, e.currentTarget, e.shiftKey ? -1 : 1);
+                        }
+                      }}
                     />
                   </td>
                 </tr>
@@ -207,6 +259,43 @@ export default function ShoppingList({
           <div className="text-lg font-semibold">{currency(grandTotal)}</div>
         </div>
       </div>
+
+      {/* OVERLAY graphe "statique" */}
+      {sticky && (
+        <div
+          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) closeSticky();
+          }}
+        >
+          <div className="relative rounded-2xl bg-[#0f1319] border border-white/10 shadow-2xl w-[90vw] max-w-5xl">
+            <button
+              onClick={closeSticky}
+              className="absolute top-3 right-3 rounded-lg bg-white/10 hover:bg-white/15 border border-white/10 px-2.5 py-1 text-sm"
+              aria-label="Fermer"
+              title="Fermer"
+            >
+              ✕
+            </button>
+            <div className="p-4">
+              <div className="text-sm mb-2 text-slate-300">{sticky.title}</div>
+              <PriceHistoryHover
+                kind={sticky.kind}
+                id={sticky.id}
+                title={sticky.title}
+                width={900}
+                height={420}
+                position="cursor"
+              >
+                <div className="h-[420px] w-full rounded-lg bg-[#0b0f14] border border-white/10 cursor-crosshair" />
+              </PriceHistoryHover>
+              <div className="text-xs text-slate-500 mt-2">
+                Survolez la zone pour inspecter précisément le graphe. Échap pour fermer.
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

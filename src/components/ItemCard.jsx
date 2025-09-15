@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { colors } from "../theme/colors";
 import { currency, itemLevel, toInt } from "../lib/utils";
 import PriceHistoryHover, { PRICE_KIND } from "./PriceHistoryHover";
@@ -12,6 +12,22 @@ export default function ItemCard({
   onCommitIngredientPrice,
   onCommitSellPrice,
 }) {
+  const [sticky, setSticky] = useState(null);
+  // sticky = { kind: PRICE_KIND, id: number, title: string }
+
+  const openSticky = (kind, id, title) => setSticky({ kind, id, title });
+  const closeSticky = () => setSticky(null);
+
+  // Échap pour fermer le graphe fixe
+  useEffect(() => {
+    if (!sticky) return;
+    const onKey = (e) => {
+      if (e.key === "Escape") closeSticky();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [sticky]);
+
   const craftCount = Math.max(1, Number(it.craftCount || 1));
 
   const investment = useMemo(() => {
@@ -34,36 +50,54 @@ export default function ItemCard({
       {/* HEADER */}
       <div className="flex items-start justify-between gap-3 mb-3">
         <div className="flex items-start gap-3 min-w-0">
-          <PriceHistoryHover
-            kind={PRICE_KIND.SELL}
-            id={it.ankamaId}
-            title={`Évolution · ${it.displayName}`}
-            width={460}
-            height={240}
+          {/* clic souris OK, mais ignoré par Tab */}
+          <button
+            type="button"
+            tabIndex={-1}
+            aria-hidden="true"
+            onClick={() => openSticky(PRICE_KIND.SELL, it.ankamaId, `Évolution · ${it.displayName}`)}
+            className="shrink-0"
+            title="Voir l'historique de prix"
           >
-            <img
-              src={it.img}
-              alt=""
-              className="w-14 h-14 rounded bg-black/20 object-contain shrink-0"
-              draggable="false"
-            />
-          </PriceHistoryHover>
+            <PriceHistoryHover
+              kind={PRICE_KIND.SELL}
+              id={it.ankamaId}
+              title={`Évolution · ${it.displayName}`}
+              width={460}
+              height={240}
+            >
+              <img
+                src={it.img}
+                alt=""
+                className="w-14 h-14 rounded bg-black/20 object-contain"
+                draggable="false"
+              />
+            </PriceHistoryHover>
+          </button>
 
           <div className="min-w-0">
             <div className="text-lg font-semibold truncate">
-              <PriceHistoryHover
-                kind={PRICE_KIND.SELL}
-                id={it.ankamaId}
-                title={`Évolution · ${it.displayName}`}
-                width={460}
-                height={240}
+              {/* clic souris OK, mais ignoré par Tab */}
+              <button
+                type="button"
+                tabIndex={-1}
+                aria-hidden="true"
+                onClick={() => openSticky(PRICE_KIND.SELL, it.ankamaId, `Évolution · ${it.displayName}`)}
+                className="cursor-default group"
+                title="Voir l'historique de prix"
               >
-                <span className="cursor-default group">
+                <PriceHistoryHover
+                  kind={PRICE_KIND.SELL}
+                  id={it.ankamaId}
+                  title={`Évolution · ${it.displayName}`}
+                  width={460}
+                  height={240}
+                >
                   <span className="group-hover:font-semibold transition">
                     {it.displayName}
                   </span>
-                </span>
-              </PriceHistoryHover>
+                </PriceHistoryHover>
+              </button>
             </div>
 
             <div className="flex items-center gap-2 text-sm text-slate-300">
@@ -159,22 +193,15 @@ export default function ItemCard({
         <div className="space-y-2">
           {(it.ingredients || []).map((ing) => (
             <div key={ing.ankamaId} className="flex items-center gap-3">
-              <PriceHistoryHover
-                kind={PRICE_KIND.ING}
-                id={ing.ankamaId}
-                title={`Évolution · ${ing.name}`}
-                width={420}
-                height={220}
+              {/* clic souris OK, mais ignoré par Tab */}
+              <button
+                type="button"
+                tabIndex={-1}
+                aria-hidden="true"
+                onClick={() => openSticky(PRICE_KIND.ING, ing.ankamaId, `Évolution · ${ing.name}`)}
+                className="shrink-0"
+                title="Voir l'historique de prix"
               >
-                <img
-                  src={ing.img}
-                  alt=""
-                  className="w-7 h-7 rounded bg-black/20 object-contain"
-                  draggable="false"
-                />
-              </PriceHistoryHover>
-
-              <div className="min-w-0 flex-1">
                 <PriceHistoryHover
                   kind={PRICE_KIND.ING}
                   id={ing.ankamaId}
@@ -182,14 +209,43 @@ export default function ItemCard({
                   width={420}
                   height={220}
                 >
-                  {/* truncate + title pour éviter l’empiètement sur l’input */}
-                  <div className="leading-tight cursor-default group">
-                    <div className="text-sm truncate group-hover:font-semibold transition max-w-[10px] md:max-w-[7.5vw]" title={ing.name}>
-                      {ing.name}
-                    </div>
-                    <div className="text-[11px] text-slate-400">x{ing.qty}</div>
-                  </div>
+                  <img
+                    src={ing.img}
+                    alt=""
+                    className="w-7 h-7 rounded bg-black/20 object-contain"
+                    draggable="false"
+                  />
                 </PriceHistoryHover>
+              </button>
+
+              <div className="min-w-0 flex-1">
+                {/* clic souris OK, mais ignoré par Tab */}
+                <button
+                  type="button"
+                  tabIndex={-1}
+                  aria-hidden="true"
+                  onClick={() => openSticky(PRICE_KIND.ING, ing.ankamaId, `Évolution · ${ing.name}`)}
+                  className="w-full text-left"
+                  title="Voir l'historique de prix"
+                >
+                  <PriceHistoryHover
+                    kind={PRICE_KIND.ING}
+                    id={ing.ankamaId}
+                    title={`Évolution · ${ing.name}`}
+                    width={420}
+                    height={220}
+                  >
+                    <div className="leading-tight cursor-default group">
+                      <div
+                        className="text-sm truncate group-hover:font-semibold transition max-w-[10px] md:max-w-[7.5vw]"
+                        title={ing.name}
+                      >
+                        {ing.name}
+                      </div>
+                      <div className="text-[11px] text-slate-400">x{ing.qty}</div>
+                    </div>
+                  </PriceHistoryHover>
+                </button>
               </div>
 
               <div className="w-40">
@@ -215,7 +271,7 @@ export default function ItemCard({
       </div>
 
       {/* FOOTER */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-4">
+      <div className="grid grid-cols-1 md-grid-cols-3 md:grid-cols-3 gap-3 mt-4">
         <div className="rounded-xl bg-[#151A22] border border-white/10 p-3">
           <div className="text-xs text-slate-400">Investissement</div>
           <div className="text-lg font-semibold">{currency(investment)}</div>
@@ -236,6 +292,44 @@ export default function ItemCard({
           <div className="text-lg font-semibold">{Number.isFinite(coeff) ? coeff.toFixed(2) : "–"}</div>
         </div>
       </div>
+
+      {/* OVERLAY graphe "statique" */}
+      {sticky && (
+        <div
+          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
+          onClick={(e) => {
+            // clic en dehors de la carte => ferme
+            if (e.target === e.currentTarget) closeSticky();
+          }}
+        >
+          <div className="relative rounded-2xl bg-[#0f1319] border border-white/10 shadow-2xl w-[90vw] max-w-5xl">
+            <button
+              onClick={closeSticky}
+              className="absolute top-3 right-3 rounded-lg bg-white/10 hover:bg-white/15 border border-white/10 px-2.5 py-1 text-sm"
+              aria-label="Fermer"
+              title="Fermer"
+            >
+              ✕
+            </button>
+            <div className="p-4">
+              <div className="text-sm mb-2 text-slate-300">{sticky.title}</div>
+              <PriceHistoryHover
+                kind={sticky.kind}
+                id={sticky.id}
+                title={sticky.title}
+                width={900}
+                height={420}
+                position="cursor"
+              >
+                <div className="h-[420px] w-full rounded-lg bg-[#0b0f14] border border-white/10 cursor-crosshair" />
+              </PriceHistoryHover>
+              <div className="text-xs text-slate-500 mt-2">
+                Survolez la zone pour inspecter précisément le graphe. Échap pour fermer.
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
