@@ -11,6 +11,14 @@ export function stripAccents(input) {
   }
 }
 
+/** Forcer un entier (kamas) ou undefined si vide / invalide */
+export function toInt(value) {
+  if (value === "" || value == null) return undefined;
+  const n = Number(value);
+  if (!Number.isFinite(n)) return undefined;
+  return Math.round(n);
+}
+
 /** Nom d’item (priorité FR, sinon EN/DE/ES ou titre) */
 export function itemName(it) {
   if (!it) return "?";
@@ -25,7 +33,6 @@ export function itemImage(it) {
   const direct = it?.img || it?.imgUrl || it?.icon || it?.imageUrl || it?.iconUrl || it?.image?.url;
   if (direct) return direct;
 
-  // Fallbacks légers si dispo (ne cassent rien si absents)
   if (it?.images && typeof it.images === "object") {
     const vals = Object.values(it.images).filter(Boolean);
     if (vals.length) return String(vals[0]);
@@ -36,7 +43,6 @@ export function itemImage(it) {
     it?.gfx ??
     itemAnkamaId(it);
   if (id != null) {
-    // Chemin générique (sera ignoré si inexistant)
     return `https://api.dofusdb.fr/img/items/${id}.png`;
   }
   return undefined;

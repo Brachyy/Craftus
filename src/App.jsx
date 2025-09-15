@@ -1,22 +1,15 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { colors } from "./theme/colors";
 import SearchBar from "./components/SearchBar";
 import JobSelect from "./components/JobSelect";
 import ItemCard from "./components/ItemCard";
 import ComparisonTable from "./components/ComparisonTable";
-import ShoppingList from "./components/ShoppingList";
+import ShoppingList from "./components/ShoppingList"; // ⬅️ shopping list
 
-import {
-  itemAnkamaId,
-  itemImage,
-  itemLevel,
-  itemName,
-  isEquipment,
-} from "./lib/utils";
-
+import { itemAnkamaId, itemImage, itemLevel, itemName } from "./lib/utils";
 import {
   apiGET,
-  searchItems, // <-- on revient à ça pour la recherche
+  searchItems,
   fetchRecipeEntriesForItem,
   fetchItemsByIds,
 } from "./lib/api";
@@ -30,61 +23,63 @@ import LoadDialog from "./sessions/LoadDialog";
 // Métadonnées (types & classes)
 import { loadItemTypes, loadBreeds, extractItemTypeMeta } from "./lib/meta";
 
-// Ton logo
+// Prix communautaires
+import {
+  getCommunityPrice,
+  pushCommunityPrice,
+  PRICE_KIND,
+} from "./lib/communityPrices";
+
+// Logo
 import craftusLogo from "./assets/craftus.png";
 
-/* =========================
-   Helpers
-========================= */
+const TAX_RATE = 0.02;
 
-// Nettoyage basique avant sauvegarde Firestore
-function sanitizeForFirestore(value) {
-  if (Array.isArray(value)) return value.map(sanitizeForFirestore);
-  if (value && typeof value === "object") {
-    const out = {};
-    for (const [k, v] of Object.entries(value)) {
-      if (v === undefined) continue;
-      const sv = sanitizeForFirestore(v);
-      if (sv === undefined) continue;
-      out[k] = sv;
-    }
-    return out;
-  }
-  if (typeof value === "number" && Number.isNaN(value)) return null;
-  return value;
+// ---- calculs (net = revenu brut - taxe 2%) ----
+function computeInvestment(it) {
+  const perUnit = (it.ingredients || []).reduce(
+    (sum, ing) => sum + (ing.unitPrice ?? 0) * ing.qty,
+    0
+  );
+  return perUnit * (it.craftCount || 1);
+}
+function computeGrossRevenue(it) {
+  return (it.sellPrice ?? 0) * (it.craftCount || 1);
+}
+function computeTax(it) {
+  return computeGrossRevenue(it) * TAX_RATE;
+}
+function computeNetRevenue(it) {
+  return computeGrossRevenue(it) - computeTax(it);
+}
+function computeGain(it) {
+  return computeNetRevenue(it) - computeInvestment(it);
+}
+function computeCoeff(it) {
+  const inv = computeInvestment(it);
+  const net = computeNetRevenue(it);
+  if (!inv) return null;
+  return net / inv;
 }
 
-// Métier requis & niveau à partir d'une recette
-async function fetchRecipeJobMeta(resultItemId, setDebugUrl, setDebugErr) {
-  try {
-    const data = await apiGET(`/recipes?resultId=${encodeURIComponent(resultItemId)}&$limit=1`, setDebugUrl, setDebugErr);
-    const arr = Array.isArray(data) ? data : data?.data ?? [];
-    const r = arr[0];
-    if (!r) return null;
-
-    let jobId = r?.jobId ?? r?.job?.id ?? null;
-    if (!jobId) {
-      const skillId = r?.skillId ?? r?.skill?.id ?? r?.skill ?? null;
-      // Petit fallback: /skills/:id pour retrouver jobId si besoin
-      if (skillId) {
-        try {
-          const sk = await apiGET(`/skills/${encodeURIComponent(skillId)}`, setDebugUrl, setDebugErr);
-          jobId = sk?.jobId ?? sk?.job?.id ?? null;
-        } catch {/* ignore */}
-      }
-    }
-    const levelRequired = r?.levelRequired ?? r?.level ?? r?.minLevel ?? null;
-    if (!jobId && !levelRequired) return null;
-    return { jobId: jobId ? String(jobId) : null, levelRequired: levelRequired ?? null };
-  } catch (e) {
-    setDebugErr(String(e?.message || e));
-    return null;
-  }
+// --------- outils partage (Base64URL) ----------
+function toBase64Url(json) {
+  const b64 = btoa(unescape(encodeURIComponent(json)));
+  return b64.replaceAll("+", "-").replaceAll("/", "_").replace(/=+$/, "");
+}
+function fromBase64Url(b64url) {
+  const b64 = b64url.replaceAll("-", "+").replaceAll("_", "/") + "===".slice(0, (4 - (b64url.length % 4)) % 4);
+  const s = atob(b64);
+  return decodeURIComponent(escape(s));
 }
 
-/* =========================
-   Composant principal
-========================= */
+// --------- helper entier kamas ----------
+function toInt(v) {
+  if (v === "" || v == null) return undefined;
+  const n = Number(v);
+  if (!Number.isFinite(n)) return undefined;
+  return Math.round(n);
+}
 
 export default function App() {
   // Recherche
@@ -95,12 +90,15 @@ export default function App() {
   // Fil d’objets
   const [items, setItems] = useState([]);
 
-  // Filtres (on garde le filtre “équipement”, la recherche est par défaut craftable-only)
+  // Filtres visibles
   const [equipmentOnly, setEquipmentOnly] = useState(false);
+  // ⚠️ On ne montre PLUS la case “craftables” : on force à true
+  const craftableOnly = true;
+
   const [jobs, setJobs] = useState([]);
   const [jobId, setJobId] = useState("");
 
-  // Debug
+  // Debug (facultatif)
   const [debugUrl, setDebugUrl] = useState("");
   const [debugErr, setDebugErr] = useState("");
   const [showDebug, setShowDebug] = useState(false);
@@ -128,10 +126,7 @@ export default function App() {
   const [itemTypesMap, setItemTypesMap] = useState({});
   const [breeds, setBreeds] = useState([]);
 
-  // Prix globaux (Shopping List — partagés entre items)
-  const [globalPrices, setGlobalPrices] = useState({}); // { [ingId]: { unitPrice } }
-
-  // Charger types + classes (comme avant)
+  // Charger types + classes
   useEffect(() => {
     (async () => {
       const [typesMap, breedsArr] = await Promise.all([
@@ -143,7 +138,7 @@ export default function App() {
     })();
   }, []);
 
-  // Charger métiers (icônes + noms)
+  // Charger métiers
   useEffect(() => {
     (async () => {
       try {
@@ -162,118 +157,138 @@ export default function App() {
               (j?.icon?.url ? j.icon.url : undefined) ||
               (j?.iconId ? `https://api.dofusdb.fr/img/jobs/${j.iconId}.png` : undefined) ||
               (id ? `https://dofusdb.fr/assets/jobs/${id}.png` : undefined);
-            return { id: String(id), name, iconUrl };
+            return { id, name, iconUrl };
           })
           .filter(Boolean);
         setJobs(norm);
-      } catch {/* ignore */}
+      } catch {
+        /* ignore */
+      }
     })();
   }, []);
 
-  /* -------- Recherche live via l’API (comme avant) -------- */
+  // Recherche live (debounce)
   const debounceRef = useRef(null);
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
-
-    // on force craftableOnly = true par défaut (ton souhait)
-    const craftableOnly = true;
-
     if (!query || query.trim().length < 2) {
       setSuggestions([]);
       return;
     }
-
     setLoadingSuggest(true);
     const filters = {
       equipmentOnly,
-      craftableOnly,
+      craftableOnly: true, // ⬅️ FORCÉ
       jobId: jobId || null,
       jobName: null,
     };
-
     debounceRef.current = setTimeout(async () => {
-      try {
-        const arr = await searchItems({
-          query: query.trim(),
-          filters,
-          setDebugUrl,
-          setDebugErr,
-        });
-        setSuggestions(arr || []);
-      } catch (e) {
-        setDebugErr(String(e?.message || e));
-        setSuggestions([]);
-      } finally {
-        setLoadingSuggest(false);
-      }
-    }, 250); // fluide
+      const arr = await searchItems({
+        query: query.trim(),
+        filters,
+        setDebugUrl,
+        setDebugErr,
+      });
+      setSuggestions(arr);
+      setLoadingSuggest(false);
+    }, 300);
   }, [query, equipmentOnly, jobId]);
 
-  /* -------- Ajout d’un item (comme avant, + job meta) -------- */
+  // Ajouter un item depuis une suggestion (avec pré-remplissage des prix communautaires)
   async function addItem(raw) {
     const id = itemAnkamaId(raw);
     if (!id) return alert("ID Ankama introuvable pour cet objet.");
 
-    // Recette (ingrédients)
     const entries = await fetchRecipeEntriesForItem(id, setDebugUrl, setDebugErr);
     if (!entries.length) return alert("Recette introuvable (objet non craftable ?).");
 
     const ids = [...new Set(entries.map((e) => e.itemId))];
-    const map = ids.length ? await fetchItemsByIds(ids, setDebugUrl, setDebugErr) : {};
+    const map = await fetchItemsByIds(ids, setDebugUrl, setDebugErr);
 
     const ingredients = entries.map((e) => {
       const rit = map[e.itemId];
-      const gp = globalPrices[e.itemId];
       return {
         ankamaId: e.itemId,
         name: itemName(rit) || `#${e.itemId}`,
         img: itemImage(rit),
         qty: e.quantity,
-        unitPrice: gp?.unitPrice ?? undefined,
+        unitPrice: undefined,
       };
     });
 
-    // Métier requis (on le récupère via la recette du résultat)
-    let job = null;
-    const meta = await fetchRecipeJobMeta(id, setDebugUrl, setDebugErr);
-    if (meta?.jobId) {
-      const jj = jobs.find((j) => String(j.id) === String(meta.jobId));
-      job = {
-        id: String(meta.jobId),
-        name: jj?.name || "Métier",
-        iconUrl: jj?.iconUrl || null,
-        levelRequired: meta.levelRequired ?? null,
-      };
-    } else if (meta?.levelRequired != null) {
-      job = { id: null, name: "Métier", iconUrl: null, levelRequired: meta.levelRequired };
-    }
-
     const { typeId, typeName } = extractItemTypeMeta(raw);
 
-    setItems((prev) => [
-      ...prev,
-      {
-        key: `${id}-${Date.now()}`,
-        ankamaId: id,
-        displayName: itemName(raw) || `Item ${id}`,
-        level: itemLevel(raw),
-        img: itemImage(raw),
-        craftCount: 1,
-        ingredients,
-        sellPrice: undefined,
-        typeId: typeId ?? null,
-        typeName: typeName ?? null,
-        job, // affiché sous le nom de l’item
-      },
-    ]);
+    const base = {
+      key: `${id}-${Date.now()}`,
+      ankamaId: id,
+      displayName: itemName(raw) || `Item ${id}`,
+      level: itemLevel(raw),
+      img: itemImage(raw),
+      craftCount: 1,
+      ingredients,
+      sellPrice: undefined,
+      typeId: typeId ?? null,
+      typeName: typeName ?? null,
+      tags: { classId: "" },
+      job: raw.job || null,
+    };
+
+    // Pré-remplir avec les prix communautaires (si existants) — ENTIER
+    try {
+      const [sellDoc, ...ingDocs] = await Promise.all([
+        getCommunityPrice(PRICE_KIND.SELL, id),
+        ...ingredients.map((ing) => getCommunityPrice(PRICE_KIND.ING, ing.ankamaId)),
+      ]);
+      if (sellDoc?.lastPrice != null) base.sellPrice = Math.round(Number(sellDoc.lastPrice));
+      base.ingredients = base.ingredients.map((ing, idx) => {
+        const d = ingDocs[idx];
+        return d?.lastPrice != null ? { ...ing, unitPrice: Math.round(Number(d.lastPrice)) } : ing;
+      });
+    } catch (e) {
+      console.warn("[prefill] community price fetch failed", e);
+    }
+
+    setItems((prev) => [...prev, base]);
     setQuery("");
     setSuggestions([]);
   }
 
-  /* -------- Mises à jour locales -------- */
-  const updateIngredientPrice = (itemKey, ingId, price) => {
-    const val = price === "" || price == null ? undefined : Number(price);
+  // Rafraîchir tous les prix depuis la BDD communautaire (écrase les inputs) — ENTIER
+  async function refreshCommunityPricesForAll() {
+    if (!items.length) return;
+    try {
+      const refreshed = await Promise.all(
+        items.map(async (it) => {
+          const copy = { ...it, ingredients: it.ingredients.map((x) => ({ ...x })) };
 
+          try {
+            const d = await getCommunityPrice(PRICE_KIND.SELL, copy.ankamaId);
+            if (d?.lastPrice != null) copy.sellPrice = Math.round(Number(d.lastPrice));
+          } catch (e) {
+            console.warn("[refresh] sell", { itemId: copy.ankamaId, e });
+          }
+
+          for (let i = 0; i < copy.ingredients.length; i++) {
+            const ing = copy.ingredients[i];
+            try {
+              const d = await getCommunityPrice(PRICE_KIND.ING, ing.ankamaId);
+              if (d?.lastPrice != null) ing.unitPrice = Math.round(Number(d.lastPrice));
+            } catch (e) {
+              console.warn("[refresh] ing", { ingId: ing.ankamaId, e });
+            }
+          }
+          return copy;
+        })
+      );
+      setItems(refreshed);
+    } catch (e) {
+      console.error("[refreshCommunityPricesForAll] failed", e);
+    }
+  }
+
+  // Mises à jour inputs — ENTIER
+  const updateIngredientPrice = (itemKey, ingId, price) => {
+    const val = price === "" || price == null ? undefined : Math.max(0, Math.round(Number(price)));
     setItems((prev) =>
       prev.map((it) =>
         it.key !== itemKey
@@ -286,102 +301,140 @@ export default function App() {
             }
       )
     );
-
-    // garder la Shopping List source de vérité
-    setGlobalPrices((prev) => {
-      const next = { ...prev };
-      if (val === undefined) delete next[ingId];
-      else next[ingId] = { unitPrice: val };
-      return next;
-    });
   };
-
   const updateSellPrice = (itemKey, price) =>
     setItems((prev) =>
       prev.map((it) =>
         it.key !== itemKey
           ? it
-          : { ...it, sellPrice: price === "" || price == null ? undefined : Number(price) }
+          : { ...it, sellPrice: price === "" || price == null ? undefined : Math.max(0, Math.round(Number(price))) }
       )
     );
-
   const updateCraftCount = (itemKey, count) =>
     setItems((prev) =>
       prev.map((it) =>
-        it.key !== itemKey ? it : { ...it, craftCount: Math.max(1, Math.floor(Number(count) || 1)) }
+        it.key !== itemKey
+          ? it
+          : { ...it, craftCount: Math.max(1, Math.floor(Number(count) || 1)) }
       )
     );
 
   const removeItem = (itemKey) => setItems((prev) => prev.filter((it) => it.key !== itemKey));
-
   const clearAll = () => {
     setItems([]);
     setCurrentSessionId(null);
     setSessionIconUrl(null);
     setSessionName(null);
-    setGlobalPrices({});
   };
 
-  // Propage prix globaux → items (sync Shopping List → cartes)
-  useEffect(() => {
-    setItems((prev) =>
-      prev.map((it) => ({
-        ...it,
-        ingredients: it.ingredients.map((ing) => {
-          const gp = globalPrices[ing.ankamaId];
-          if (gp?.unitPrice != null) return { ...ing, unitPrice: gp.unitPrice };
-          return ing;
-        }),
-      }))
-    );
-  }, [globalPrices]);
-
-  // Shopping rows
-  const shoppingRows = useMemo(() => {
-    const mapAgg = new Map();
-    for (const it of items) {
-      const mult = Math.max(1, Number(it.craftCount) || 1);
-      for (const ing of it.ingredients) {
-        const key = String(ing.ankamaId);
-        const prev = mapAgg.get(key) || {
-          ankamaId: ing.ankamaId,
-          name: ing.name,
-          img: ing.img,
-          totalQty: 0,
-          unitPrice: undefined,
-        };
-        prev.totalQty += (Number(ing.qty) || 0) * mult;
-        const gp = globalPrices[ing.ankamaId];
-        prev.unitPrice = gp?.unitPrice != null ? gp.unitPrice : prev.unitPrice;
-        if (!prev.name && ing.name) prev.name = ing.name;
-        if (!prev.img && ing.img) prev.img = ing.img;
-        mapAgg.set(key, prev);
-      }
+  // Commit vers BDD communautaire au blur — ENTIER
+  async function commitIngredientPrice(itemKey, ingId) {
+    const it = items.find((x) => x.key === itemKey);
+    if (!it) return;
+    const ing = it.ingredients.find((g) => g.ankamaId === ingId);
+    if (!ing) return;
+    const v = Math.round(Number(ing.unitPrice));
+    if (!Number.isFinite(v) || v < 0) return;
+    if (!auth.currentUser) {
+      console.warn("[commit] ignoré: utilisateur non connecté");
+      return;
     }
-    return Array.from(mapAgg.values()).sort((a, b) => a.name.localeCompare(b.name));
-  }, [items, globalPrices]);
+    await pushCommunityPrice(PRICE_KIND.ING, ingId, v, auth.currentUser.uid);
+  }
+  async function commitSellPrice(itemKey) {
+    const it = items.find((x) => x.key === itemKey);
+    if (!it) return;
+    const v = Math.round(Number(it.sellPrice));
+    if (!Number.isFinite(v) || v < 0) return;
+    if (!auth.currentUser) {
+      console.warn("[commit] ignoré: utilisateur non connecté");
+      return;
+    }
+    await pushCommunityPrice(PRICE_KIND.SELL, it.ankamaId, v, auth.currentUser.uid);
+  }
 
-  // Snapshot / restore
+  // Snapshot / restore sessions (on ne sauvegarde plus les prix : ils viennent de la BDD)
   function buildSnapshot() {
-    const raw = {
-      version: 10,
+    const strippedItems = items.map((it) => ({
+      ...it,
+      sellPrice: undefined,
+      ingredients: it.ingredients.map((ing) => ({ ...ing, unitPrice: undefined })),
+    }));
+    return {
+      version: 4,
       when: new Date().toISOString(),
-      filters: { equipmentOnly, jobId },
+      filters: { equipmentOnly, craftableOnly: true, jobId },
       sort,
-      items,
-      globalPrices,
+      items: strippedItems,
     };
-    return sanitizeForFirestore(raw);
   }
   function restoreFromSnapshot(snap) {
-    setItems(Array.isArray(snap.items) ? snap.items : []);
+    const its = Array.isArray(snap.items) ? snap.items : [];
+    its.forEach((i) => {
+      i.tags = i.tags || {};
+      if (i.tags.classId == null) i.tags.classId = "";
+      i.sellPrice = undefined;
+      i.ingredients = (i.ingredients || []).map((ing) => ({ ...ing, unitPrice: undefined }));
+    });
+    setItems(its);
     setSort(snap.sort || { key: "gain", dir: "desc" });
     setJobId(snap.filters?.jobId || "");
     setEquipmentOnly(!!snap.filters?.equipmentOnly);
-    setGlobalPrices(snap.globalPrices || {});
+    // Ecrase après chargement → recharge les PRIX depuis la BDD
+    setTimeout(() => {
+      refreshCommunityPricesForAll();
+    }, 0);
   }
 
-  // Logo suggéré pour la session
+  // --------- Partage via lien & JSON ----------
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    const data = url.searchParams.get("data");
+    if (!data) return;
+    try {
+      const json = fromBase64Url(data);
+      const snap = JSON.parse(json);
+      restoreFromSnapshot(snap); // déclenchera refreshCommunityPricesForAll()
+    } catch (e) {
+      console.warn("Lien de partage invalide.", e);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  async function shareByLink() {
+    try {
+      const snap = buildSnapshot();
+      const json = JSON.stringify(snap);
+      const b64url = toBase64Url(json);
+      const url = `${location.origin}${location.pathname}?data=${b64url}`;
+      await navigator.clipboard.writeText(url);
+      alert("Lien copié dans le presse-papiers !");
+    } catch (e) {
+      alert("Impossible de copier le lien. Voir console.");
+      console.error(e);
+    }
+  }
+  function exportJSON() {
+    const snap = buildSnapshot();
+    const blob = new Blob([JSON.stringify(snap, null, 2)], { type: "application/json" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `craftus-session-${Date.now()}.json`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  }
+  function importJSON() {
+    const txt = prompt("Collez ici le JSON de session :");
+    if (!txt) return;
+    try {
+      const snap = JSON.parse(txt);
+      restoreFromSnapshot(snap); // déclenchera refreshCommunityPricesForAll()
+      alert("Session chargée !");
+    } catch {
+      alert("JSON invalide.");
+    }
+  }
+
   function computeSuggestedLogo() {
     if (items.length > 0) {
       const it = items[0];
@@ -398,7 +451,7 @@ export default function App() {
   return (
     <div className={`${colors.bg} text-slate-100 min-h-screen p-4 md:p-6`}>
       <div className="max-w-6xl mx-auto">
-        {/* Header */}
+        {/* Header avec logo */}
         <header className="flex items-center justify-between gap-3 mb-4">
           <div className="flex items-center gap-3">
             <img
@@ -419,7 +472,18 @@ export default function App() {
           <AuthBar user={user} />
         </header>
 
-        {/* Actions */}
+        {/* Debug */}
+        {showDebug && (
+          <div className={`mb-4 text-xs text-slate-400 rounded-xl ${colors.panel} border ${colors.border} p-3`}>
+            <div className="font-semibold mb-1">Debug réseau</div>
+            <div className="break-all">
+              <div><span className="opacity-70">Dernière URL :</span> {debugUrl || "—"}</div>
+              <div><span className="opacity-70">Dernière erreur :</span> {debugErr || "—"}</div>
+            </div>
+          </div>
+        )}
+
+        {/* Barre d’actions */}
         <div className="flex flex-wrap items-center gap-2 mb-3">
           <button
             onClick={() => setShowDebug((v) => !v)}
@@ -447,9 +511,38 @@ export default function App() {
           >
             Charger
           </button>
+
+          <button
+            onClick={refreshCommunityPricesForAll}
+            disabled={!items.length}
+            className={`px-3 py-2 rounded-xl bg-[#20242a] text-slate-200 border ${colors.border} hover:border-emerald-500 text-sm`}
+            title="Écrase tous les prix avec les derniers prix communautaires"
+          >
+            Rafraîchir les prix
+          </button>
+
+          {/* Partage */}
+          <button
+            onClick={shareByLink}
+            className="ml-auto px-3 py-2 rounded-xl bg-white/10 hover:bg-white/15 text-slate-200 text-sm border border-white/10"
+          >
+            Partager (lien)
+          </button>
+          <button
+            onClick={exportJSON}
+            className="px-3 py-2 rounded-xl bg-white/10 hover:bg-white/15 text-slate-200 text-sm border border-white/10"
+          >
+            Export JSON
+          </button>
+          <button
+            onClick={importJSON}
+            className="px-3 py-2 rounded-xl bg-white/10 hover:bg-white/15 text-slate-200 text-sm border border-white/10"
+          >
+            Import JSON
+          </button>
         </div>
 
-        {/* Filtres */}
+        {/* Filtres (on enlève le checkbox “craftables”) */}
         <div className={`mb-4 rounded-2xl border ${colors.border} ${colors.panel} p-3`}>
           <div className="flex flex-wrap items-center gap-3">
             <label className="inline-flex items-center gap-2 text-sm">
@@ -463,7 +556,7 @@ export default function App() {
             </label>
             <div className="flex items-center gap-2 text-sm">
               <JobSelect jobs={jobs} value={jobId} onChange={setJobId} />
-              <span className="text-slate-400 text-xs">(filtre métier appliqué à la recherche)</span>
+              <span className="text-slate-400 text-xs">(filtre optionnel)</span>
             </div>
           </div>
         </div>
@@ -475,7 +568,6 @@ export default function App() {
           suggestions={suggestions}
           loading={loadingSuggest}
           onChoose={addItem}
-          placeholder="Rechercher un objet craftable… (ex: gelano, enragé mineur, kwache)"
         />
 
         {/* FIL d’objets */}
@@ -484,68 +576,55 @@ export default function App() {
             <ItemCard
               key={it.key}
               it={it}
-              onRemove={removeItem}
+              onRemove={(k) => removeItem(k)}
               onUpdateSellPrice={updateSellPrice}
+              onCommitSellPrice={commitSellPrice}
               onUpdateCraftCount={updateCraftCount}
               onUpdateIngredientPrice={updateIngredientPrice}
-              itemTypesMap={itemTypesMap}
-              globalPrices={globalPrices}
+              onCommitIngredientPrice={commitIngredientPrice}
+              taxRate={TAX_RATE}
+              computeInvestment={computeInvestment}
+              computeNetRevenue={computeNetRevenue}
+              computeGain={computeGain}
+              computeCoeff={computeCoeff}
             />
           ))}
         </div>
 
-        {/* Shopping List */}
+        {/* 🛒 Shopping list — entre le fil et le comparatif */}
         {items.length > 0 && (
-          <div className="mt-4">
+          <div className="mt-6">
             <ShoppingList
-              rows={shoppingRows}
-              onSetPrice={(ingId, price) => {
-                const val = price === "" || price == null ? undefined : Number(price);
-                setGlobalPrices((prev) => {
-                  const next = { ...prev };
-                  if (val === undefined) delete next[ingId];
-                  else next[ingId] = { unitPrice: val };
-                  return next;
-                });
-              }}
+              items={items}
+              onUpdateIngredientPrice={updateIngredientPrice}
+              onCommitIngredientPrice={commitIngredientPrice}
             />
           </div>
         )}
 
-        {/* Comparatif */}
-        {items.length > 1 && (
-          <ComparisonTable items={items} sort={sort} setSort={setSort} onRemove={(k) => removeItem(k)} />
-        )}
-
-        {/* Debug réseau */}
-        {showDebug && (
-          <div className={`mt-4 text-xs text-slate-400 rounded-xl ${colors.panel} border ${colors.border} p-3`}>
-            <div className="font-semibold mb-1">Debug réseau</div>
-            <div className="break-all">
-              <div><span className="opacity-70">Dernière URL :</span> {debugUrl || "—"}</div>
-              <div><span className="opacity-70">Dernière erreur :</span> {debugErr || "—"}</div>
-            </div>
-          </div>
+        {/* Comparatif — maintenant dès 1 item */}
+        {items.length >= 1 && (
+          <ComparisonTable
+            items={items}
+            sort={sort}
+            setSort={setSort}
+            onRemove={(k) => removeItem(k)}
+            taxRate={TAX_RATE}
+            computeInvestment={computeInvestment}
+            computeGrossRevenue={computeGrossRevenue}
+            computeTax={computeTax}
+            computeNetRevenue={computeNetRevenue}
+          />
         )}
       </div>
 
-      {/* Modales sessions */}
+      {/* Modales */}
       <SaveDialog
         open={openSave}
         onClose={() => setOpenSave(false)}
         user={user}
         currentSessionId={currentSessionId}
-        buildSnapshot={() => {
-          const raw = {
-            version: 10,
-            when: new Date().toISOString(),
-            filters: { equipmentOnly, jobId },
-            sort,
-            items,
-            globalPrices,
-          };
-          return sanitizeForFirestore(raw);
-        }}
+        buildSnapshot={buildSnapshot}
         onSaved={(id, name, icon) => {
           setCurrentSessionId(id);
           if (name) setSessionName(name);
@@ -554,18 +633,7 @@ export default function App() {
         jobs={jobs}
         itemTypesMap={itemTypesMap}
         breeds={breeds}
-        suggestedLogo={(() => {
-          if (items.length > 0) {
-            const it = items[0];
-            const t = it.typeId && itemTypesMap[it.typeId];
-            if (t?.iconUrl) return { kind: "type", id: t.id, name: t.name, url: t.iconUrl };
-          }
-          if (jobId) {
-            const j = jobs.find((x) => String(x.id) === String(jobId));
-            if (j?.iconUrl) return { kind: "job", id: j.id, name: j.name, url: j.iconUrl };
-          }
-          return null;
-        })()}
+        suggestedLogo={computeSuggestedLogo()}
       />
       <LoadDialog
         open={openLoad}
@@ -575,11 +643,7 @@ export default function App() {
           setCurrentSessionId(id);
           setSessionName(name || null);
           setSessionIconUrl(icon?.url || null);
-          setItems(Array.isArray(data.items) ? data.items : []);
-          setSort(data.sort || { key: "gain", dir: "desc" });
-          setJobId(data.filters?.jobId || "");
-          setEquipmentOnly(!!data.filters?.equipmentOnly);
-          setGlobalPrices(data.globalPrices || {});
+          restoreFromSnapshot(data);
         }}
       />
     </div>
