@@ -52,6 +52,8 @@ export default function PriceHistoryHover({
   width = 420,
   height = 240,
   position = "cursor",
+  staticOpen = false,
+  serverId = "global",
 }) {
   const anchorRef = useRef(null);
   const [open, setOpen] = useState(false);
@@ -64,13 +66,14 @@ export default function PriceHistoryHover({
 
   // Chargement du graphe + des données uniquement quand ouvert
   useEffect(() => {
-    if (!open) return;
+    const isOpen = staticOpen || open;
+    if (!isOpen) return;
     let cancelled = false;
     (async () => {
       if (!Line) setLine(await ensureChartsLoaded());
       setLoading(true);
       try {
-        const snap = await getCommunityPrice(kind, id);
+        const snap = await getCommunityPrice(kind, id, serverId);
         if (!cancelled) setSeries(toSeries(snap?.history));
       } catch (e) {
         console.warn("[PriceHistoryHover] fetch fail", e);
@@ -79,7 +82,7 @@ export default function PriceHistoryHover({
       }
     })();
     return () => { cancelled = true; };
-  }, [open, kind, id, Line]);
+  }, [open, staticOpen, kind, id, Line]);
 
   // Calcul de la position de la popup (viewport coords pour fixed)
   const tooltipPos = useMemo(() => {
@@ -131,7 +134,14 @@ export default function PriceHistoryHover({
     maintainAspectRatio: false,
     plugins: {
       legend: { display: false },
-      tooltip: { callbacks: { label: (c) => `${currency(c.parsed.y)} k` } },
+      tooltip: {
+        mode: 'index',
+        intersect: false,
+        callbacks: {
+          title: (items) => items && items.length ? items[0].label : '',
+          label: (c) => `${currency(c.parsed.y)} k`,
+        }
+      },
     },
     scales: {
       x: { grid: { display: false }, ticks: { maxRotation: 0, autoSkip: true } },
@@ -141,21 +151,24 @@ export default function PriceHistoryHover({
       line: { borderColor: "rgba(16,185,129,1)", backgroundColor: "rgba(16,185,129,.15)" },
       point: { radius: 0, hoverRadius: 3 },
     },
+    interaction: { mode: 'index', intersect: false },
   }), []);
 
   return (
     <>
-      <span
-        ref={anchorRef}
-        className="inline-flex group"
-        onMouseEnter={() => setOpen(true)}
-        onMouseLeave={() => setOpen(false)}
-        onMouseMove={(e) => setMouse({ x: e.clientX, y: e.clientY })}
-      >
-        {children}
-      </span>
+      {!staticOpen && (
+        <span
+          ref={anchorRef}
+          className="inline-flex group"
+          onMouseEnter={() => setOpen(true)}
+          onMouseLeave={() => setOpen(false)}
+          onMouseMove={(e) => setMouse({ x: e.clientX, y: e.clientY })}
+        >
+          {children}
+        </span>
+      )}
 
-      {open && (
+      {(!staticOpen && open) && (
         <div
           className="pointer-events-none fixed z-50"
           style={{ top: tooltipPos.top, left: tooltipPos.left, width, height }}
@@ -166,6 +179,40 @@ export default function PriceHistoryHover({
                 {title || "Historique des prix"}
               </div>
               <div className="text-[11px] text-slate-200">
+                {series.last ? (
+                  <>
+                    <span className="font-semibold">{currency(series.last.p)}</span>{" · "}
+                    <span className="opacity-80">
+                      {new Intl.DateTimeFormat(undefined, {
+                        year: "2-digit", month: "2-digit", day: "2-digit",
+                        hour: "2-digit", minute: "2-digit",
+                      }).format(series.last.t)}
+                    </span>
+                  </>
+                ) : loading ? "Chargement…" : "—"}
+              </div>
+            </div>
+            <div className="w-full h-[calc(100%-28px)]">
+              {Line ? (
+                <Line data={data} options={options} />
+              ) : (
+                <div className="text-center text-xs text-slate-400 mt-6">
+                  Graph indisponible (installe <code>chart.js</code> + <code>react-chartjs-2</code>)
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {staticOpen && (
+        <div className="w-full h-full">
+          <div className="rounded-xl border border-white/10 bg-[#0f1318] p-3 w-full h-full">
+            <div className="flex items-baseline justify-between gap-2 mb-2">
+              <div className="text-sm text-slate-300 truncate">
+                {title || "Historique des prix"}
+              </div>
+              <div className="text-xs text-slate-200">
                 {series.last ? (
                   <>
                     <span className="font-semibold">{currency(series.last.p)}</span>{" · "}

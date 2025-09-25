@@ -37,10 +37,10 @@ const TAX_RATE = 0.02;
 
 // ---- calculs (net = revenu brut - taxe 2%) ----
 function computeInvestment(it) {
-  const perUnit = (it.ingredients || []).reduce(
-    (sum, ing) => sum + (ing.unitPrice ?? 0) * ing.qty,
-    0
-  );
+  const perUnit = (it.ingredients || []).reduce((sum, ing) => {
+    if (ing.farmed) return sum;
+    return sum + (ing.unitPrice ?? 0) * ing.qty;
+  }, 0);
   return perUnit * (it.craftCount || 1);
 }
 function computeGrossRevenue(it) {
@@ -89,6 +89,9 @@ export default function App() {
 
   const [jobs, setJobs] = useState([]);
   const [jobId, setJobId] = useState("");
+
+  // Multi-serveur (segmentation des prix)
+  const [serverId, setServerId] = useState("Brial");
 
   // Debug (facultatif)
   const [debugUrl, setDebugUrl] = useState("");
@@ -194,6 +197,21 @@ export default function App() {
     const id = itemAnkamaId(raw);
     if (!id) return alert("ID Ankama introuvable pour cet objet.");
 
+    // Si l'item existe déjà dans la liste, on incrémente simplement la quantité
+    const already = items.find((x) => x.ankamaId === id);
+    if (already) {
+      setItems((prev) =>
+        prev.map((it) =>
+          it.ankamaId === id
+            ? { ...it, craftCount: Math.max(1, Math.floor(Number(it.craftCount || 1)) + 1) }
+            : it
+        )
+      );
+      setQuery("");
+      setSuggestions([]);
+      return;
+    }
+
     const entries = await fetchRecipeEntriesForItem(id, setDebugUrl, setDebugErr);
     if (!entries.length) return alert("Recette introuvable (objet non craftable ?).");
 
@@ -208,6 +226,7 @@ export default function App() {
         img: itemImage(rit),
         qty: e.quantity,
         unitPrice: undefined,
+        farmed: false,
       };
     });
 
@@ -231,8 +250,8 @@ export default function App() {
     // Pré-remplir avec les prix communautaires (si existants)
     try {
       const [sellDoc, ...ingDocs] = await Promise.all([
-        getCommunityPrice(PRICE_KIND.SELL, id),
-        ...ingredients.map((ing) => getCommunityPrice(PRICE_KIND.ING, ing.ankamaId)),
+        getCommunityPrice(PRICE_KIND.SELL, id, serverId),
+        ...ingredients.map((ing) => getCommunityPrice(PRICE_KIND.ING, ing.ankamaId, serverId)),
       ]);
       if (sellDoc?.lastPrice != null) base.sellPrice = Number(sellDoc.lastPrice);
       base.ingredients = base.ingredients.map((ing, idx) => {
@@ -248,16 +267,20 @@ export default function App() {
     setSuggestions([]);
   }
 
-  // Rafraîchir tous les prix depuis la BDD communautaire (écrase les inputs)
+  // Rafraîchir tous les prix depuis la BDD communautaire (DESTRUCTIF après confirmation)
   async function refreshCommunityPricesForAll() {
     if (!items.length) return;
+    const ok = window.confirm(
+      "Cette action va écraser vos prix saisis localement avec les derniers prix communautaires. Continuer ?"
+    );
+    if (!ok) return;
     try {
       const refreshed = await Promise.all(
         items.map(async (it) => {
           const copy = { ...it, ingredients: it.ingredients.map((x) => ({ ...x })) };
 
           try {
-            const d = await getCommunityPrice(PRICE_KIND.SELL, copy.ankamaId);
+            const d = await getCommunityPrice(PRICE_KIND.SELL, copy.ankamaId, serverId);
             if (d?.lastPrice != null) copy.sellPrice = Number(d.lastPrice);
           } catch (e) {
             console.warn("[refresh] sell", { itemId: copy.ankamaId, e });
@@ -266,7 +289,7 @@ export default function App() {
           for (let i = 0; i < copy.ingredients.length; i++) {
             const ing = copy.ingredients[i];
             try {
-              const d = await getCommunityPrice(PRICE_KIND.ING, ing.ankamaId);
+              const d = await getCommunityPrice(PRICE_KIND.ING, ing.ankamaId, serverId);
               if (d?.lastPrice != null) ing.unitPrice = Number(d.lastPrice);
             } catch (e) {
               console.warn("[refresh] ing", { ingId: ing.ankamaId, e });
@@ -334,7 +357,7 @@ export default function App() {
       console.warn("[commit] ignoré: utilisateur non connecté");
       return;
     }
-    await pushCommunityPrice(PRICE_KIND.ING, ingId, v, auth.currentUser.uid);
+    await pushCommunityPrice(PRICE_KIND.ING, ingId, v, auth.currentUser.uid, serverId);
   }
   async function commitSellPrice(itemKey) {
     const it = items.find((x) => x.key === itemKey);
@@ -345,7 +368,7 @@ export default function App() {
       console.warn("[commit] ignoré: utilisateur non connecté");
       return;
     }
-    await pushCommunityPrice(PRICE_KIND.SELL, it.ankamaId, v, auth.currentUser.uid);
+    await pushCommunityPrice(PRICE_KIND.SELL, it.ankamaId, v, auth.currentUser.uid, serverId);
   }
 
   // Snapshot / restore sessions (on ne sauvegarde plus les prix : ils viennent de la BDD)
@@ -359,6 +382,7 @@ export default function App() {
       version: 4,
       when: new Date().toISOString(),
       filters: { equipmentOnly, craftableOnly: true, jobId },
+      serverId,
       sort,
       items: strippedItems,
     };
@@ -375,6 +399,7 @@ export default function App() {
     setSort(snap.sort || { key: "gain", dir: "desc" });
     setJobId(snap.filters?.jobId || "");
     setEquipmentOnly(!!snap.filters?.equipmentOnly);
+    if (snap.serverId) setServerId(snap.serverId);
     // Demande un pré-remplissage juste après montage des items
     setPendingPrefill(true);
   }
@@ -488,6 +513,30 @@ export default function App() {
 
         {/* Barre d’actions */}
         <div className="flex flex-wrap items-center gap-2 mb-3">
+          {/* Sélecteur de serveur */}
+          <div className="flex items-center gap-2 text-sm">
+            <label className="text-slate-300">Serveur</label>
+            <select
+              value={serverId}
+              onChange={(e) => setServerId(e.target.value)}
+              className={`px-3 py-2 rounded-xl bg-[#20242a] text-slate-200 border ${colors.border}`}
+              title="Choisissez votre serveur (les prix sont segmentés)"
+            >
+              <option value="Brial">Brial</option>
+              <option value="Dakal">Dakal</option>
+              <option value="Draconiros">Draconiros</option>
+              <option value="Hell Mina">Hell Mina</option>
+              <option value="Imagiro">Imagiro</option>
+              <option value="Kourial">Kourial</option>
+              <option value="Mikhal">Mikhal</option>
+              <option value="Orukam">Orukam</option>
+              <option value="Rafal">Rafal</option>
+              <option value="Salar">Salar</option>
+              <option value="Shadow">Shadow</option>
+              <option value="Tal Kasha">Tal Kasha</option>
+              <option value="Tylezia">Tylezia</option>
+            </select>
+          </div>
           <button
             onClick={() => setShowDebug((v) => !v)}
             className={`px-3 py-2 rounded-xl bg-[#20242a] text-slate-300 border ${colors.border} hover:border-emerald-500 text-sm`}
@@ -519,7 +568,7 @@ export default function App() {
             onClick={refreshCommunityPricesForAll}
             disabled={!items.length}
             className={`px-3 py-2 rounded-xl bg-[#20242a] text-slate-200 border ${colors.border} hover:border-emerald-500 text-sm`}
-            title="Écrase tous les prix avec les derniers prix communautaires"
+            title="Écrase vos prix locaux avec les derniers prix communautaires"
           >
             Rafraîchir les prix
           </button>
@@ -548,15 +597,37 @@ export default function App() {
         {/* Filtres (on enlève le checkbox “craftables”) */}
         <div className={`mb-4 rounded-2xl border ${colors.border} ${colors.panel} p-3`}>
           <div className="flex flex-wrap items-center gap-3">
-            <label className="inline-flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                className="accent-emerald-500"
-                checked={equipmentOnly}
-                onChange={(e) => setEquipmentOnly(e.target.checked)}
-              />
-              Uniquement les équipements
-            </label>
+          <label className="inline-flex items-center gap-2 text-sm cursor-pointer select-none">
+  <span className="relative inline-flex w-10 h-6">
+    <input
+      type="checkbox"
+      className="sr-only peer"
+      checked={equipmentOnly}
+      onChange={(e) => setEquipmentOnly(e.target.checked)}
+    />
+    {/* Track */}
+    <span
+      className="
+        block w-10 h-6 rounded-full
+        bg-[#1b1f26] border border-white/10
+        transition-colors duration-300
+        peer-checked:bg-emerald-600
+      "
+    />
+    {/* Knob */}
+    <span
+      className="
+        absolute top-0.5 left-0.5
+        h-5 w-5 rounded-full
+        bg-[#0b0f14] border border-white/10
+        transition-transform duration-200
+        peer-checked:translate-x-4
+      "
+    />
+  </span>
+  <span>Uniquement les équipements</span>
+</label>
+
             <div className="flex items-center gap-2 text-sm">
               <JobSelect jobs={jobs} value={jobId} onChange={setJobId} />
               <span className="text-slate-400 text-xs">(filtre optionnel)</span>
@@ -574,7 +645,7 @@ export default function App() {
         />
 
         {/* FIL d’objets */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-2 gap-4">
           {items.map((it) => (
             <ItemCard
               key={it.key}

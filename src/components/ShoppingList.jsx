@@ -40,6 +40,7 @@ export default function ShoppingList({
           img: ing.img,
           qty,
           unitPrice,
+          farmed: prev?.farmed ?? !!ing.farmed,
         });
       }
     }
@@ -51,7 +52,7 @@ export default function ShoppingList({
   if (!rows.length) return null;
 
   const grandTotal = rows.reduce(
-    (s, r) => s + (Math.max(0, Math.round(r.unitPrice ?? 0)) * (r.qty || 0)),
+    (s, r) => s + ((r.farmed ? 0 : Math.max(0, Math.round(r.unitPrice ?? 0))) * (r.qty || 0)),
     0
   );
 
@@ -117,7 +118,11 @@ export default function ShoppingList({
   };
 
   // util pour sélectionner tout le contenu au focus
-  const selectAll = (e) => requestAnimationFrame(() => e.target.select());
+  const handleFocus = (e) => {
+    if (e.detail === 0) {
+      requestAnimationFrame(() => e.target.select());
+    }
+  };
 
   return (
     <div className={`rounded-2xl border ${colors.border} ${colors.panel} p-4`}>
@@ -140,8 +145,8 @@ export default function ShoppingList({
           </thead>
           <tbody>
             {rows.map((r) => {
-              const unitRounded = Math.max(0, Math.round(r.unitPrice ?? 0));
-              const derivedTotal = unitRounded * (r.qty || 0);
+              const unitRounded = Number.isFinite(Number(r.unitPrice)) ? Math.max(0, Math.round(Number(r.unitPrice))) : undefined;
+              const derivedTotal = Number.isFinite(unitRounded) ? unitRounded * (r.qty || 0) : undefined;
               const totalValue =
                 Object.prototype.hasOwnProperty.call(totalDrafts, r.id)
                   ? totalDrafts[r.id]
@@ -151,7 +156,7 @@ export default function ShoppingList({
                 <tr key={r.id} className="border-b border-white/5 align-top">
                   {/* Ingrédient : clic souris pour graphe, ignoré par Tab */}
                   <td className="py-2 pr-2">
-                    <div className="flex items-start gap-2">
+                    <div className="flex items-center gap-2">
                       <button
                         type="button"
                         tabIndex={-1}
@@ -176,29 +181,51 @@ export default function ShoppingList({
                         </PriceHistoryHover>
                       </button>
 
-                      <button
-                        type="button"
-                        tabIndex={-1}
-                        aria-hidden="true"
-                        onClick={() => openSticky(PRICE_KIND.ING, r.id, `Évolution · ${r.name}`)}
-                        className="text-left"
-                        title="Voir l'historique de prix"
-                      >
-                        <PriceHistoryHover
-                          kind={PRICE_KIND.ING}
-                          id={r.id}
-                          title={`Évolution · ${r.name}`}
-                          width={420}
-                          height={220}
-                          position="cursor"
+                      <div className="flex flex-col justify-center">
+                        <button
+                          type="button"
+                          tabIndex={-1}
+                          aria-hidden="true"
+                          onClick={() => openSticky(PRICE_KIND.ING, r.id, `Évolution · ${r.name}`)}
+                          className="text-left"
+                          title="Voir l'historique de prix"
                         >
-                          <span className="leading-tight cursor-default group break-words">
-                            <span className="group-hover:font-semibold transition">
-                              {r.name}
+                          <PriceHistoryHover
+                            kind={PRICE_KIND.ING}
+                            id={r.id}
+                            title={`Évolution · ${r.name}`}
+                            width={420}
+                            height={220}
+                            position="cursor"
+                          >
+                            <span className="leading-tight cursor-default group break-words">
+                              <span className="group-hover:font-semibold transition">
+                                {r.name}
+                              </span>
                             </span>
-                          </span>
-                        </PriceHistoryHover>
-                      </button>
+                          </PriceHistoryHover>
+                        </button>
+                        <label className="mt-1 relative inline-flex items-center cursor-pointer select-none h-6">
+                          <input
+                            type="checkbox"
+                            className="sr-only peer"
+                            checked={!!r.farmed}
+                            onChange={(e) => {
+                              const val = !!e.target.checked;
+                              for (const it of items) {
+                                const line = it.ingredients.find((x) => x.ankamaId === r.id);
+                                if (line) {
+                                  line.farmed = val;
+                                  onUpdateIngredientPrice(it.key, r.id, line.unitPrice ?? "");
+                                }
+                              }
+                            }}
+                          />
+                          <span className="relative w-10 h-6 rounded-full bg-[#1b1f26] border border-white/10 peer-checked:bg-emerald-600 transition-colors"></span>
+                          <span className="absolute top-1/2 left-[4px] -translate-y-1/2 h-5 w-5 rounded-full bg-[#0b0f14] border border-white/10 transition-transform peer-checked:translate-x-4"></span>
+                          <span className="ml-2 text-[12px] text-slate-300">Farmé</span>
+                        </label>
+                      </div>
                     </div>
                   </td>
 
@@ -206,14 +233,14 @@ export default function ShoppingList({
                   <td className="py-2 pr-2 text-slate-300">{r.qty}</td>
 
                   {/* Prix unitaire */}
-                  <td className="py-2 pr-2">
+                  <td className="py-2 pr-2 text-right">
                     <input
                       ref={setUnitRef}
-                      type="number"
+                      type="text"
                       inputMode="numeric"
-                      className="h-9 w-36 rounded-lg bg-[#1b1f26] border border-white/10 px-2 text-sm"
+                      className="h-9 w-36 rounded-lg bg-[#1b1f26] border border-white/10 px-2 text-sm text-right"
                       value={Number.isFinite(unitRounded) ? unitRounded : ""}
-                      onFocus={selectAll}
+                      onFocus={handleFocus}
                       onChange={(e) => {
                         const n = Number(e.target.value);
                         const unit = Number.isFinite(n) ? Math.max(0, Math.round(n)) : "";
@@ -233,7 +260,7 @@ export default function ShoppingList({
                   <td className="py-2 pr-2">
                     <input
                       ref={setTotalRef}
-                      type="number"
+                      type="text"
                       inputMode="numeric"
                       className="h-9 w-40 rounded-lg bg-[#1b1f26] border border-white/10 px-2 text-sm"
                       value={totalValue}
@@ -241,8 +268,7 @@ export default function ShoppingList({
                         if (!Object.prototype.hasOwnProperty.call(totalDrafts, r.id)) {
                           startTotalEdit(r.id, derivedTotal);
                         }
-                        // sélectionne tout le contenu pour saisie rapide
-                        selectAll(e);
+                        handleFocus(e);
                       }}
                       onChange={(e) => changeTotalDraft(r.id, e.target.value)}
                       onBlur={() => commitTotalDraft(r.id, r.qty)}
@@ -292,12 +318,8 @@ export default function ShoppingList({
                 kind={sticky.kind}
                 id={sticky.id}
                 title={sticky.title}
-                width={900}
-                height={420}
-                position="cursor"
-              >
-                <div className="h-[420px] w-full rounded-lg bg-[#0b0f14] border border-white/10 cursor-crosshair" />
-              </PriceHistoryHover>
+                staticOpen={true}
+              />
               <div className="text-xs text-slate-500 mt-2">
                 Survolez la zone pour inspecter précisément le graphe. Échap pour fermer.
               </div>

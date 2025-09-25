@@ -29,6 +29,7 @@ export default function ItemCard({
 
   const investment = useMemo(() => {
     return (it.ingredients || []).reduce((sum, ing) => {
+      if (ing.farmed) return sum;
       const q = Number(ing.qty || 0);
       const p = Math.round(Number(ing.unitPrice || 0));
       return sum + q * p;
@@ -42,7 +43,13 @@ export default function ItemCard({
   const gain = revenueNet - investment;
   const coeff = investment > 0 ? revenueNet / investment : null;
 
-  const selectAll = (e) => requestAnimationFrame(() => e.target.select());
+  // Sélectionne tout au focus clavier; au clic souris, laisse le caret où il est
+  const handleFocus = (e) => {
+    if (e.detail === 0) {
+      // focus programmatique / clavier
+      requestAnimationFrame(() => e.target.select());
+    }
+  };
 
   return (
     <div className={`rounded-2xl border ${colors.border} ${colors.panel} p-4`}>
@@ -136,12 +143,10 @@ export default function ItemCard({
         <div>
           <div className="text-xs text-slate-400 mb-1">Prix de revente unitaire (k)</div>
           <input
-            type="number"
+            type="text"
             inputMode="numeric"
-            step="1"
-            min="0"
             value={it.sellPrice ?? ""}
-            onFocus={selectAll}
+            onFocus={handleFocus}
             onChange={(e) => onUpdateSellPrice?.(it.key, toInt(e.target.value))}
             onBlur={() => {
               if (onCommitSellPrice && it.sellPrice != null && Number.isFinite(Number(it.sellPrice))) {
@@ -165,7 +170,7 @@ export default function ItemCard({
               min="1"
               className="h-10 w-full rounded-xl bg-[#1b1f26] border border-white/10 px-3"
               value={craftCount}
-              onFocus={selectAll}
+              onFocus={handleFocus}
               onChange={(e) => onUpdateCraftCount?.(it.key, toInt(e.target.value) ?? 1)}
             />
             <div className="flex items-center gap-1">
@@ -190,10 +195,16 @@ export default function ItemCard({
 
       {/* INGREDIENTS */}
       <div className="mt-2">
-        <div className="text-sm font-semibold mb-2">Recette</div>
+        <div className="flex items-center justify-between mb-2">
+          <div className="text-sm font-semibold">Recette</div>
+          <div className="text-xs font-semibold text-slate-300 w-63 text-left pr-2">Prix unitaire (k)</div>
+        </div>
         <div className="space-y-2">
           {(it.ingredients || []).map((ing) => (
-            <div key={ing.ankamaId} className="flex items-center gap-3">
+            <div
+              key={ing.ankamaId}
+              className="grid grid-cols-[auto_1fr_10rem_auto] items-center gap-3"
+            >
               {/* Image cliquable (non focusable au Tab) */}
               <button
                 type="button"
@@ -250,15 +261,12 @@ export default function ItemCard({
               </div>
 
               <div className="w-40">
-                <div className="text-xs text-slate-400 mb-1">Prix unitaire (k)</div>
                 <input
-                  type="number"
+                  type="text"
                   inputMode="numeric"
-                  step="1"
-                  min="0"
-                  className="h-9 w-full rounded-lg bg-[#1b1f26] border border-white/10 px-2 text-sm"
+                  className="h-9 w-full rounded-lg bg-[#1b1f26] border border-white/10 px-2 text-sm text-right"
                   value={ing.unitPrice ?? ""}
-                  onFocus={selectAll}
+                  onFocus={handleFocus}
                   onChange={(e) => onUpdateIngredientPrice?.(it.key, ing.ankamaId, toInt(e.target.value))}
                   onBlur={() => {
                     if (onCommitIngredientPrice && ing.unitPrice != null && Number.isFinite(Number(ing.unitPrice))) {
@@ -267,6 +275,49 @@ export default function ItemCard({
                   }}
                 />
               </div>
+
+                <div className="justify-self-start">
+    <label className="inline-flex items-center cursor-pointer select-none">
+      {/* Wrapper pour que le knob soit positionné par rapport au track */}
+      <span className="relative inline-flex w-10 h-6">
+        <input
+          type="checkbox"
+          className="sr-only peer"
+          checked={!!ing.farmed}
+          onChange={(e) => {
+            const val = !!e.target.checked;
+            const updated = (it.ingredients || []).map((g) =>
+              g.ankamaId === ing.ankamaId ? { ...g, farmed: val } : g
+            );
+            it.ingredients = updated;
+            onUpdateIngredientPrice?.(it.key, ing.ankamaId, ing.unitPrice ?? "");
+          }}
+        />
+        {/* Track (sibling de l'input) */}
+        <span
+          className="
+            block w-10 h-6 rounded-full
+            bg-[#1b1f26] border border-white/10
+            transition-colors duration-300
+            peer-checked:bg-emerald-600
+          "
+        />
+        {/* Knob (sibling de l'input) */}
+        <span
+          className="
+            absolute top-0.5 left-0.5
+            h-5 w-5 rounded-full
+            bg-[#0b0f14] border border-white/10
+            transition-transform duration-200
+            peer-checked:translate-x-4
+          "
+        />
+      </span>
+
+      <span className="ml-2 text-[12px] text-slate-300">Farmé ?</span>
+    </label>
+  </div>
+
             </div>
           ))}
         </div>
@@ -318,12 +369,8 @@ export default function ItemCard({
                 kind={sticky.kind}
                 id={sticky.id}
                 title={sticky.title}
-                width={900}
-                height={420}
-                position="cursor"
-              >
-                <div className="h-[420px] w-full rounded-lg bg-[#0b0f14] border border-white/10 cursor-crosshair" />
-              </PriceHistoryHover>
+                staticOpen={true}
+              />
               <div className="text-xs text-slate-500 mt-2">
                 Survolez la zone pour inspecter précisément le graphe. Échap pour fermer.
               </div>

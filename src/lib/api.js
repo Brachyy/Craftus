@@ -40,8 +40,9 @@ export async function tryFetchRecipesForItem(ankamaId, setDebugUrl, setDebugErr)
   const variants = [
     `?resultId=${ankamaId}`,
     `?result_id=${ankamaId}`,
-    `?result[$eq]=${ankamaId}`,
     `?itemId=${ankamaId}`,
+    // Fallbacks additionnels connus sur certaines versions
+    `?resultItemId=${ankamaId}`,
   ];
   for (const v of variants) {
     try {
@@ -88,13 +89,14 @@ export async function fetchItemsByIds(ids, setDebugUrl, setDebugErr) {
 export async function searchItems({ query, filters, setDebugUrl, setDebugErr }) {
   if (!query || query.trim().length < 2) return [];
   const q = encodeURIComponent(query.trim());
-  const services = ["items", "objects"];
+  const services = ["items"]; // éviter "objects" qui renvoie 404 sur cette API
   const build = (svc) => [
-    `/${svc}?$limit=20&$search=${q}`,
-    `/${svc}?$limit=20&name[$regex]=${q}&name[$options]=i`,
-    `/${svc}?$limit=20&name.fr[$regex]=${q}&name.fr[$options]=i`,
-    `/${svc}?$limit=20&$search=${q}&language=fr`,
+    // Prioriser les regex plutôt que $search (évite certains 500)
     `/${svc}?$limit=20&name[$regex]=${q}&name[$options]=i&language=fr`,
+    `/${svc}?$limit=20&name.fr[$regex]=${q}&name.fr[$options]=i`,
+    `/${svc}?$limit=20&name[$regex]=${q}&name[$options]=i`,
+    `/${svc}?$limit=20&$search=${q}&language=fr`,
+    `/${svc}?$limit=20&$search=${q}`,
   ];
 
   let base = [];
