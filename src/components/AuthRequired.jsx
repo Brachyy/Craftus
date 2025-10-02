@@ -11,34 +11,34 @@ const AuthRequired = ({ onSignIn }) => {
   const images = [
     {
       src: craftus1,
-      title: "Calculatrice de Profit",
-      description: "Analysez la rentabilité de vos crafts Dofus",
+      title: "Recherchez vos items",
+      description: "Trouvez facilement les objets que vous souhaitez fabriquer",
       gradient: "from-blue-500/20 to-purple-500/20",
-      emoji: "📊"
+      emoji: "🔍"
     },
     {
       src: craftus2,
-      title: "Prix Communautaires",
-      description: "Données partagées par la communauté",
+      title: "Renseignez les prix",
+      description: "Saisissez vos prix d'achat et de vente pour chaque ingrédient",
       gradient: "from-green-500/20 to-emerald-500/20",
-      emoji: "👥"
+      emoji: "💰"
     },
     {
       src: craftus3,
-      title: "Interface Moderne",
-      description: "Design épuré et fonctionnalités avancées",
+      title: "Comparez et analysez",
+      description: "Visualisez la rentabilité et comparez vos options",
       gradient: "from-orange-500/20 to-red-500/20",
-      emoji: "⚡"
+      emoji: "📊"
     }
   ];
 
-  // Auto-rotation des images
+  // Auto-rotation des images avec réinitialisation du timer
   useEffect(() => {
     const interval = setInterval(() => {
       setCurrentImage((prev) => (prev + 1) % images.length);
     }, 4000);
     return () => clearInterval(interval);
-  }, [images.length]);
+  }, [currentImage]); // Dépendance sur currentImage pour réinitialiser le timer
 
   const nextImage = () => {
     setCurrentImage((prev) => (prev + 1) % images.length);
@@ -86,7 +86,7 @@ const AuthRequired = ({ onSignIn }) => {
               
               if (isCenter) {
                 position = 'translate-x-0';
-                scale = 'scale-100';
+                scale = 'scale-110';
                 blur = 'blur-0';
                 opacity = 'opacity-100';
                 zIndex = 'z-30';

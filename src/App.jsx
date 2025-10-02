@@ -164,6 +164,15 @@ export default function App() {
   const [openSave, setOpenSave] = useState(false);
   const [openLoad, setOpenLoad] = useState(false);
   const [openHelp, setOpenHelp] = useState(false);
+  
+  // Ouvrir automatiquement le helper pour les nouveaux utilisateurs
+  useEffect(() => {
+    const hasSeenHelper = localStorage.getItem('craftus_helper_seen');
+    if (!hasSeenHelper && user) {
+      setOpenHelp(true);
+      localStorage.setItem('craftus_helper_seen', 'true');
+    }
+  }, [user]);
   const [currentSessionId, setCurrentSessionId] = useState(null);
 
   // Icône de la session courante
