@@ -2,11 +2,15 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { colors } from "../theme/colors";
 import { currency } from "../lib/utils";
 import PriceHistoryHover, { PRICE_KIND } from "./PriceHistoryHover";
+import { detectAnomaly } from "../lib/anomalyDetection";
+import { getCommunityPrice } from "../lib/communityPrices";
+import PriceWarning from "./PriceWarning";
 
 export default function ShoppingList({
   items,
   onUpdateIngredientPrice,
   onCommitIngredientPrice,
+  serverId,
 }) {
   // Overlay graphe "statique"
   const [sticky, setSticky] = useState(null);
@@ -22,6 +26,11 @@ export default function ShoppingList({
 
   // Brouillons pour "Prix total"
   const [totalDrafts, setTotalDrafts] = useState({});
+  
+  // Prix communautaires pour les ingrédients
+  const [ingredientPrices, setIngredientPrices] = useState({});
+  const [forceRender, setForceRender] = useState(0);
+
 
   const rows = useMemo(() => {
     const map = new Map();
@@ -48,6 +57,53 @@ export default function ShoppingList({
       a.name.localeCompare(b.name, "fr")
     );
   }, [items]);
+
+  // Charger les prix communautaires pour tous les ingrédients
+  useEffect(() => {
+    if (!serverId || !rows.length) return;
+
+    const loadPrices = async () => {
+      const prices = {};
+      for (const row of rows) {
+        try {
+          const priceData = await getCommunityPrice(PRICE_KIND.ING, row.id, serverId);
+          if (priceData) {
+            prices[row.id] = priceData;
+          }
+        } catch (error) {
+          console.error(`Erreur lors du chargement du prix pour ${row.name}:`, error);
+        }
+      }
+      setIngredientPrices(prices);
+      setForceRender(prev => prev + 1);
+    };
+
+    loadPrices();
+  }, [serverId, rows.length]);
+
+  // Calculer les fluctuations pour chaque ingrédient
+  const ingredientFluctuations = useMemo(() => {
+    const fluctuations = {};
+    
+    for (const row of rows) {
+      if (ingredientPrices[row.id]?.history?.length > 1) {
+        // Extraire les prix des objets history
+        const prices = ingredientPrices[row.id].history.map(h => {
+          if (typeof h === 'object') {
+            return h.p || h.price || h.value || h.amount || h;
+          }
+          return h;
+        });
+        
+        const anomaly = detectAnomaly(row.unitPrice, prices);
+        fluctuations[row.id] = anomaly.fluctuation || 0;
+      } else {
+        fluctuations[row.id] = 0;
+      }
+    }
+    
+    return fluctuations;
+  }, [serverId, rows, ingredientPrices, forceRender]);
 
   if (!rows.length) return null;
 
@@ -124,6 +180,21 @@ export default function ShoppingList({
     }
   };
 
+  // Fonction pour obtenir les classes Tailwind CSS basées sur la fluctuation
+  const getInputClasses = (fluctuation) => {
+    const baseClasses = "h-9 rounded-lg border px-2 text-sm";
+    
+    if (fluctuation <= 20) {
+      return `${baseClasses} border-emerald-500/50 bg-black/50`; // Vert avec transparence
+    } else if (fluctuation <= 50) {
+      return `${baseClasses} border-amber-500/50 bg-black/50`; // Jaune avec transparence
+    } else if (fluctuation <= 100) {
+      return `${baseClasses} border-orange-500/50 bg-black/50`; // Orange avec transparence
+    } else {
+      return `${baseClasses} border-red-500/50 bg-black/50`; // Rouge avec transparence
+    }
+  };
+
   return (
     <div className={`rounded-2xl border ${colors.border} ${colors.panel} p-4`}>
       <div className="flex items-center justify-between mb-3">
@@ -151,6 +222,10 @@ export default function ShoppingList({
                 Object.prototype.hasOwnProperty.call(totalDrafts, r.id)
                   ? totalDrafts[r.id]
                   : (Number.isFinite(derivedTotal) ? derivedTotal : "");
+              
+              // Obtenir la fluctuation et les classes pour cet ingrédient
+              const fluctuation = ingredientFluctuations[r.id] || 0;
+              const inputClasses = getInputClasses(fluctuation);
 
               return (
                 <tr key={r.id} className="border-b border-white/5 align-top">
@@ -238,7 +313,7 @@ export default function ShoppingList({
                       ref={setUnitRef}
                       type="text"
                       inputMode="numeric"
-                      className="h-9 w-36 rounded-lg bg-[#1b1f26] border border-white/10 px-2 text-sm text-right"
+                      className={`${inputClasses} w-36 text-right`}
                       value={Number.isFinite(unitRounded) ? unitRounded : ""}
                       onFocus={handleFocus}
                       onChange={(e) => {
@@ -258,27 +333,38 @@ export default function ShoppingList({
 
                   {/* Prix total (brouillon) */}
                   <td className="py-2 pr-2">
-                    <input
-                      ref={setTotalRef}
-                      type="text"
-                      inputMode="numeric"
-                      className="h-9 w-40 rounded-lg bg-[#1b1f26] border border-white/10 px-2 text-sm"
-                      value={totalValue}
-                      onFocus={(e) => {
-                        if (!Object.prototype.hasOwnProperty.call(totalDrafts, r.id)) {
-                          startTotalEdit(r.id, derivedTotal);
-                        }
-                        handleFocus(e);
-                      }}
-                      onChange={(e) => changeTotalDraft(r.id, e.target.value)}
-                      onBlur={() => commitTotalDraft(r.id, r.qty)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Tab") {
-                          e.preventDefault();
-                          moveFocus(totalRefs.current, e.currentTarget, e.shiftKey ? -1 : 1);
-                        }
-                      }}
-                    />
+                    <div className="flex items-center gap-2">
+                      <input
+                        ref={setTotalRef}
+                        type="text"
+                        inputMode="numeric"
+                        className={`${inputClasses} w-40`}
+                        value={totalValue}
+                        onFocus={(e) => {
+                          if (!Object.prototype.hasOwnProperty.call(totalDrafts, r.id)) {
+                            startTotalEdit(r.id, derivedTotal);
+                          }
+                          handleFocus(e);
+                        }}
+                        onChange={(e) => changeTotalDraft(r.id, e.target.value)}
+                        onBlur={() => commitTotalDraft(r.id, r.qty)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Tab") {
+                            e.preventDefault();
+                            moveFocus(totalRefs.current, e.currentTarget, e.shiftKey ? -1 : 1);
+                          }
+                        }}
+                      />
+                      {/* Indicateur temporel */}
+                      {ingredientPrices[r.id]?.lastAt && (
+                        <PriceWarning
+                          currentPrice={r.unitPrice}
+                          priceHistory={ingredientPrices[r.id]?.history || []}
+                          lastPriceDate={ingredientPrices[r.id].lastAt}
+                          serverId={serverId}
+                        />
+                      )}
+                    </div>
                   </td>
                 </tr>
               );

@@ -1,71 +1,67 @@
-import React, { useEffect, useRef, useState } from "react";
-import { colors } from "../theme/colors";
+import { useState, useRef, useEffect } from "react";
 
-export default function BreedSelect({ breeds = [], value, onChange }) {
+export default function BreedSelect({ breeds, value, onChange, placeholder = "Tous" }) {
   const [open, setOpen] = useState(false);
-  const ref = useRef(null);
+  const wrapRef = useRef(null);
 
   useEffect(() => {
-    function onDocDown(e) {
-      if (!ref.current) return;
-      if (!ref.current.contains(e.target)) setOpen(false);
-    }
-    document.addEventListener("pointerdown", onDocDown);
-    return () => document.removeEventListener("pointerdown", onDocDown);
-  }, []);
+    if (!open) return;
+    const onKey = (e) => { if (e.key === "Escape") setOpen(false); };
+    const onClick = (e) => { if (!wrapRef.current?.contains(e.target)) setOpen(false); };
+    window.addEventListener("keydown", onKey);
+    window.addEventListener("click", onClick);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      window.removeEventListener("click", onClick);
+    };
+  }, [open]);
 
-  const selected = breeds.find((b) => String(b.id) === String(value));
-
-  function choose(id) {
-    onChange?.(String(id || ""));
+  const selectedBreed = breeds.find(b => b.id === value);
+  const choose = (id) => {
+    onChange(id);
     setOpen(false);
-  }
+  };
 
   return (
-    <div ref={ref} className="relative">
+    <div className="relative" ref={wrapRef}>
       <button
         type="button"
-        className={`inline-flex items-center gap-2 px-2 py-1 rounded-lg ${colors.chip} border ${colors.border} hover:border-emerald-500 text-xs`}
-        onClick={() => setOpen((o) => !o)}
-        onKeyDown={(e) => e.key === "Escape" && setOpen(false)}
-        title="Associer une classe (tag visuel)"
+        onClick={() => setOpen(!open)}
+        className="px-3 py-1 rounded-lg bg-[#1b1f26] text-slate-300 border border-white/10 text-sm flex items-center gap-2 min-w-[120px]"
       >
-        {selected?.iconUrl ? (
-          <img src={selected.iconUrl} alt="" className="h-4 w-4 rounded" />
+        {selectedBreed?.iconUrl ? (
+          <img src={selectedBreed.iconUrl} alt="" className="h-4 w-4 rounded" />
         ) : (
           <span className="h-4 w-4 rounded bg-black/30 inline-block" />
         )}
-        <span>{selected ? selected.name : "Classe"}</span>
-        <svg width="12" height="12" viewBox="0 0 20 20" className="opacity-70">
-          <path d="M5 7l5 6 5-6H5z" fill="currentColor" />
-        </svg>
+        <span className="flex-1 text-left">
+          {selectedBreed?.name?.fr || selectedBreed?.name || placeholder}
+        </span>
+        <span className="text-slate-400">▼</span>
       </button>
 
       {open && (
-        <div
-          className={`absolute right-0 z-40 mt-2 w-56 max-h-64 overflow-auto rounded-xl ${colors.panel} border ${colors.border} shadow`}
-          onKeyDown={(e) => e.key === "Escape" && setOpen(false)}
-        >
+        <div className="absolute z-40 mt-2 w-64 max-h-72 overflow-auto rounded-xl bg-[#0f1319] border border-white/10 shadow-2xl">
           <button
             className="w-full text-left px-3 py-2 text-sm hover:bg-white/5 flex items-center gap-2"
             onClick={() => choose("")}
           >
             <span className="h-4 w-4 rounded bg-black/30 inline-block" />
-            Aucune
+            Tous les métiers
           </button>
           <div className="border-t border-white/5 my-1" />
-          {breeds.map((b) => (
+          {breeds.map((breed) => (
             <button
-              key={b.id}
+              key={breed.id}
               className="w-full text-left px-3 py-2 text-sm hover:bg-white/5 flex items-center gap-2"
-              onClick={() => choose(b.id)}
+              onClick={() => choose(breed.id)}
             >
-              {b.iconUrl ? (
-                <img src={b.iconUrl} alt="" className="h-4 w-4 rounded" />
+              {breed.iconUrl ? (
+                <img src={breed.iconUrl} alt="" className="h-4 w-4 rounded" />
               ) : (
                 <span className="h-4 w-4 rounded bg-black/30 inline-block" />
               )}
-              {b.name}
+              {breed.name?.fr || breed.name}
             </button>
           ))}
         </div>

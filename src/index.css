@@ -14,3 +14,180 @@ input[type="number"] {
   -moz-appearance: textfield;
 }
 
+/* Animations personnalisées pour la barre de recherche */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slide-in-right {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes glow-pulse {
+  0%, 100% {
+    box-shadow: 0 0 5px rgba(16, 185, 129, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 20px rgba(16, 185, 129, 0.6), 0 0 30px rgba(16, 185, 129, 0.4);
+  }
+}
+
+@keyframes typing {
+  from {
+    width: 0;
+  }
+  to {
+    width: 100%;
+  }
+}
+
+@keyframes blink-caret {
+  from, to {
+    border-color: transparent;
+  }
+  50% {
+    border-color: rgb(16, 185, 129);
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.5s ease-out;
+}
+
+.animate-slide-in-right {
+  animation: slide-in-right 0.3s ease-out;
+}
+
+.animate-glow-pulse {
+  animation: glow-pulse 2s ease-in-out infinite;
+}
+
+.animate-typing {
+  animation: typing 3.5s steps(40, end), blink-caret 0.75s step-end infinite;
+}
+
+/* Amélioration des transitions Tailwind */
+.transition-all {
+  transition-property: all;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 300ms;
+}
+
+/* Effet de focus amélioré */
+.search-input:focus {
+  transform: scale(1.02);
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1), 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+}
+
+/* Animations pour le menu principal */
+@keyframes slide-down {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fade-in-scale {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes button-pulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+}
+
+.animate-slide-down {
+  animation: slide-down 0.3s ease-out;
+}
+
+.animate-fade-in-scale {
+  animation: fade-in-scale 0.2s ease-out;
+}
+
+.animate-button-pulse {
+  animation: button-pulse 0.3s ease-in-out;
+}
+
+/* Styles pour les groupes du menu */
+.menu-group {
+  backdrop-filter: blur(10px);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.menu-group:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* Styles pour les boutons du menu */
+.menu-button {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.menu-button::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+  transition: left 0.5s;
+}
+
+.menu-button:hover::before {
+  left: 100%;
+}
+
+.menu-button:active {
+  transform: scale(0.98);
+}
+
+/* Responsive menu animations */
+@media (max-width: 768px) {
+  .mobile-menu {
+    animation: slide-down 0.3s ease-out;
+  }
+  
+  .mobile-menu-item {
+    animation: fade-in-scale 0.2s ease-out;
+    animation-fill-mode: both;
+  }
+  
+  .mobile-menu-item:nth-child(1) { animation-delay: 0.1s; }
+  .mobile-menu-item:nth-child(2) { animation-delay: 0.2s; }
+  .mobile-menu-item:nth-child(3) { animation-delay: 0.3s; }
+  .mobile-menu-item:nth-child(4) { animation-delay: 0.4s; }
+}
+

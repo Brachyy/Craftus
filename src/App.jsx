@@ -12,13 +12,31 @@ import {
   searchItems,
   fetchRecipeEntriesForItem,
   fetchItemsByIds,
+  fetchRecipeMetaForItem,
+  tryFetchRecipesForItem,
 } from "./lib/api";
 
 // Firebase (auth + sessions)
-import { auth, onAuthStateChanged } from "./lib/firebase";
+import { auth, onAuthStateChanged, signInWithGoogle } from "./lib/firebase";
 import AuthBar from "./auth/AuthBar";
 import SaveDialog from "./sessions/SaveDialog";
 import LoadDialog from "./sessions/LoadDialog";
+import PriceComparisonModal from "./components/PriceComparisonModal";
+import SearchSuggestions from "./components/SearchSuggestions";
+import FavoritesModal from "./components/FavoritesModal";
+import MainMenu from "./components/MainMenu";
+import AuthRequired from "./components/AuthRequired";
+import AuthLoading from "./components/AuthLoading";
+import FloatingNav from "./components/FloatingNav";
+
+// Favoris Firebase
+import { 
+  addToFavorites, 
+  removeFromFavorites, 
+  getUserFavorites, 
+  isItemFavorite,
+  rebuildFavoriteItems
+} from "./lib/favorites";
 
 // Métadonnées (types & classes)
 import { loadItemTypes, loadBreeds, extractItemTypeMeta } from "./lib/meta";
@@ -79,8 +97,13 @@ export default function App() {
   const [suggestions, setSuggestions] = useState([]);
   const [loadingSuggest, setLoadingSuggest] = useState(false);
 
-  // Fil d’objets
+  // Fil d'objets
   const [items, setItems] = useState([]);
+  const [showLimitMessage, setShowLimitMessage] = useState(false);
+
+  // Authentification
+  const [user, setUser] = useState(null);
+  const [authLoading, setAuthLoading] = useState(true);
 
   // Filtres visibles
   const [equipmentOnly, setEquipmentOnly] = useState(false);
@@ -93,6 +116,25 @@ export default function App() {
   // Multi-serveur (segmentation des prix)
   const [serverId, setServerId] = useState("Brial");
 
+  // Comparaison de prix
+  const [selectedForComparison, setSelectedForComparison] = useState(new Set());
+  const [openComparison, setOpenComparison] = useState(false);
+  const [openFavorites, setOpenFavorites] = useState(false);
+
+  // Favoris Firebase
+  const [favorites, setFavorites] = useState(new Set());
+  const [favoriteItems, setFavoriteItems] = useState([]);
+  const [favoritesLoading, setFavoritesLoading] = useState(false);
+  const [searchHistory, setSearchHistory] = useState(() => {
+    try {
+      const saved = localStorage.getItem("craftus_search_history");
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+  const [showSuggestions, setShowSuggestions] = useState(false);
+
   // Debug (facultatif)
   const [debugUrl, setDebugUrl] = useState("");
   const [debugErr, setDebugErr] = useState("");
@@ -102,9 +144,18 @@ export default function App() {
   const [sort, setSort] = useState({ key: "gain", dir: "desc" });
 
   // Auth
-  const [user, setUser] = useState(null);
   useEffect(() => {
-    const unsub = onAuthStateChanged(auth, (u) => setUser(u));
+    const unsub = onAuthStateChanged(auth, (u) => {
+      setUser(u);
+      setAuthLoading(false); // Fin du chargement d'authentification
+      if (u) {
+        loadFavorites(u.uid);
+      } else {
+        // Utilisateur déconnecté, nettoyer les favoris
+        setFavorites(new Set());
+        setFavoriteItems([]);
+      }
+    });
     return () => unsub();
   }, []);
 
@@ -117,9 +168,16 @@ export default function App() {
   const [sessionIconUrl, setSessionIconUrl] = useState(null);
   const [sessionName, setSessionName] = useState(null);
 
-  // Types d’objet & classes
+  // Types d'objet & classes
   const [itemTypesMap, setItemTypesMap] = useState({});
   const [breeds, setBreeds] = useState([]);
+
+  // Recharger les favoris quand les métadonnées sont disponibles ET qu'un utilisateur est connecté
+  useEffect(() => {
+    if (user && Object.keys(itemTypesMap).length > 0 && breeds.length > 0) {
+      loadFavorites(user.uid);
+    }
+  }, [itemTypesMap, breeds, user]);
 
   // Pré-remplissage différé (après restauration / ouverture lien)
   const [pendingPrefill, setPendingPrefill] = useState(false);
@@ -171,6 +229,7 @@ export default function App() {
     if (debounceRef.current) clearTimeout(debounceRef.current);
     if (!query || query.trim().length < 2) {
       setSuggestions([]);
+      setShowSuggestions(false);
       return;
     }
     setLoadingSuggest(true);
@@ -181,14 +240,26 @@ export default function App() {
       jobName: null,
     };
     debounceRef.current = setTimeout(async () => {
+      // Recherche segmentée : favoris d'abord, puis DofusDB
+      
+      // 1. Rechercher dans les favoris (rapide)
+      const favoriteResults = favoriteItems.filter(item => {
+        const name = item.displayName || item.name?.fr || "";
+        return name.toLowerCase().includes(query.trim().toLowerCase());
+      });
+      
+      // 2. Rechercher dans DofusDB (plus lent)
       const arr = await searchItems({
         query: query.trim(),
         filters,
         setDebugUrl,
         setDebugErr,
       });
+      
+      // Garder les résultats séparés pour l'affichage
       setSuggestions(arr);
       setLoadingSuggest(false);
+      setShowSuggestions(true);
     }, 300);
   }, [query, equipmentOnly, jobId]);
 
@@ -209,11 +280,17 @@ export default function App() {
       );
       setQuery("");
       setSuggestions([]);
+      addToSearchHistory(raw.displayName || raw.name?.fr || "");
       return;
     }
 
     const entries = await fetchRecipeEntriesForItem(id, setDebugUrl, setDebugErr);
     if (!entries.length) return alert("Recette introuvable (objet non craftable ?).");
+
+    // Récupérer les données de métier depuis DofusDB (comme dans la recherche)
+    const recs = await tryFetchRecipesForItem(id, setDebugUrl, setDebugErr);
+    const jobName = recs[0]?.jobName || recs[0]?.job?.name?.fr || recs[0]?.job?.name || undefined;
+    const jobId = recs[0]?.jobId ?? recs[0]?.job?.id;
 
     const ids = [...new Set(entries.map((e) => e.itemId))];
     const map = await fetchItemsByIds(ids, setDebugUrl, setDebugErr);
@@ -232,6 +309,26 @@ export default function App() {
 
     const { typeId, typeName } = extractItemTypeMeta(raw);
 
+    // Récupérer les données complètes de type et métier
+    const typeInfo = typeId && itemTypesMap[typeId] ? itemTypesMap[typeId] : null;
+    const breedInfo = jobId ? breeds.find(b => b.id === jobId) : null;
+    
+    // Utiliser le nom du métier depuis les recettes plutôt que depuis les breeds
+    const finalJobName = jobName || breedInfo?.name?.fr || null;
+    // Utiliser l'image des jobs avec .png au lieu de .jpg
+    let finalJobIconUrl = recs[0]?.job?.img || recs[0]?.job?.iconUrl || breedInfo?.img || breedInfo?.iconUrl || null;
+    // Forcer .png au lieu de .jpg
+    if (finalJobIconUrl && finalJobIconUrl.includes('.jpg')) {
+      finalJobIconUrl = finalJobIconUrl.replace('.jpg', '.png');
+    }
+    
+    // Créer un objet breed même si breedInfo est undefined
+    const breed = breedInfo || (finalJobName ? {
+      name: { fr: finalJobName },
+      img: finalJobIconUrl,
+      iconUrl: finalJobIconUrl
+    } : null);
+
     const base = {
       key: `${id}-${Date.now()}`,
       ankamaId: id,
@@ -243,10 +340,17 @@ export default function App() {
       sellPrice: undefined,
       typeId: typeId ?? null,
       typeName: typeName ?? null,
-      tags: { classId: "" },
+      type: typeInfo,
+      breed: breed,
       job: raw.job || null,
+      jobId: jobId,
+      jobName: finalJobName,
+      jobLevel: recs[0]?.jobLevel || recs[0]?.level || null,
+      jobIconUrl: finalJobIconUrl,
+      tags: { classId: "" },
     };
 
+    
     // Pré-remplir avec les prix communautaires (si existants)
     try {
       const [sellDoc, ...ingDocs] = await Promise.all([
@@ -262,9 +366,19 @@ export default function App() {
       console.warn("[prefill] community price fetch failed", e);
     }
 
-    setItems((prev) => [...prev, base]);
+    setItems((prev) => {
+      // Limiter à 20 items maximum
+      if (prev.length >= 20) {
+        setShowLimitMessage(true);
+        // Masquer le message après 3 secondes
+        setTimeout(() => setShowLimitMessage(false), 3000);
+        return prev; // Ne pas ajouter si déjà 20 items
+      }
+      return [...prev, base];
+    });
     setQuery("");
     setSuggestions([]);
+    addToSearchHistory(raw.displayName || raw.name?.fr || "");
   }
 
   // Rafraîchir tous les prix depuis la BDD communautaire (DESTRUCTIF après confirmation)
@@ -343,6 +457,120 @@ export default function App() {
     setCurrentSessionId(null);
     setSessionIconUrl(null);
     setSessionName(null);
+    setSelectedForComparison(new Set());
+    // Ne pas nettoyer les favoris - ils doivent persister
+  };
+
+  // Gestion de la sélection pour comparaison
+  const toggleComparison = (itemKey) => {
+    setSelectedForComparison(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(itemKey)) {
+        newSet.delete(itemKey);
+      } else {
+        newSet.add(itemKey);
+      }
+      return newSet;
+    });
+  };
+
+  // Gestion des favoris
+  // Charger les favoris depuis Firebase
+  const loadFavorites = async (uid) => {
+    if (!uid) return;
+    
+    setFavoritesLoading(true);
+    try {
+      const favoritesData = await getUserFavorites(uid);
+      const favoriteKeys = new Set(favoritesData.map(fav => fav.itemId));
+      
+      // Charger les items complets pour la searchbar
+      const favoriteItemsData = await rebuildFavoriteItems([...favoriteKeys]);
+      
+      setFavorites(favoriteKeys);
+      setFavoriteItems(favoriteItemsData);
+    } catch (error) {
+      console.error("Error loading favorites:", error);
+    } finally {
+      setFavoritesLoading(false);
+    }
+  };
+
+  // Charger les items complets des favoris (pour le modal)
+  const loadFavoriteItems = async () => {
+    if (!user || favorites.size === 0) return;
+    
+    // Ne pas recharger si on a déjà les items
+    if (favoriteItems.length === favorites.size) return;
+    
+    setFavoritesLoading(true);
+    try {
+      const favoriteItemsData = await rebuildFavoriteItems([...favorites]);
+      setFavoriteItems(favoriteItemsData);
+    } catch (error) {
+      console.error("Error loading favorite items:", error);
+    } finally {
+      setFavoritesLoading(false);
+    }
+  };
+
+  // Supprimer un favori depuis le modal
+  const removeFavorite = async (ankamaId) => {
+    if (!user) return;
+    
+    try {
+      await removeFromFavorites(user.uid, ankamaId);
+      setFavorites(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(ankamaId);
+        return newSet;
+      });
+      setFavoriteItems(prev => prev.filter(fav => fav.ankamaId !== ankamaId));
+      // Recharger les favoris pour synchroniser
+      await loadFavorites(user.uid);
+    } catch (error) {
+      console.error("Error removing favorite:", error);
+    }
+  };
+
+  // Gestion des favoris Firebase
+  const toggleFavorite = async (itemKey) => {
+    const item = items.find(it => it.key === itemKey);
+    if (!item || !user) return;
+
+    try {
+      if (favorites.has(item.ankamaId)) {
+        // Retirer des favoris
+        await removeFromFavorites(user.uid, item.ankamaId);
+        setFavorites(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(item.ankamaId);
+          return newSet;
+        });
+        setFavoriteItems(prev => prev.filter(fav => fav.ankamaId !== item.ankamaId));
+        // Recharger les favoris pour synchroniser
+        await loadFavorites(user.uid);
+      } else {
+        // Ajouter aux favoris
+        await addToFavorites(user.uid, item.ankamaId);
+        setFavorites(prev => new Set([...prev, item.ankamaId]));
+        // Recharger les favoris pour avoir des données fraîches
+        await loadFavorites(user.uid);
+      }
+    } catch (error) {
+      console.error("Error toggling favorite:", error);
+    }
+  };
+
+  // Gestion de l'historique de recherche
+  const addToSearchHistory = (query) => {
+    if (!query || query.length < 2) return;
+    setSearchHistory(prev => {
+      const filtered = prev.filter(q => q !== query);
+      const newHistory = [query, ...filtered].slice(0, 10); // Garder seulement 10 recherches
+      localStorage.setItem("craftus_search_history", JSON.stringify(newHistory));
+      return newHistory;
+    });
   };
 
   // Commit vers BDD communautaire au blur
@@ -476,6 +704,30 @@ export default function App() {
     return null;
   }
 
+  // Fonctions de navigation flottante
+  const scrollToShoppingList = () => {
+    const element = document.getElementById('shopping-section');
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
+
+  const scrollToComparison = () => {
+    const element = document.getElementById('comparison-section');
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
+
+  // Affichage conditionnel selon l'authentification
+  if (authLoading) {
+    return <AuthLoading />;
+  }
+
+  if (!user) {
+    return <AuthRequired onSignIn={signInWithGoogle} />;
+  }
+
   return (
     <div className={`${colors.bg} text-slate-100 min-h-screen p-4 md:p-6`}>
       <div className="max-w-6xl mx-auto">
@@ -511,88 +763,34 @@ export default function App() {
           </div>
         )}
 
-        {/* Barre d’actions */}
-        <div className="flex flex-wrap items-center gap-2 mb-3">
-          {/* Sélecteur de serveur */}
-          <div className="flex items-center gap-2 text-sm">
-            <label className="text-slate-300">Serveur</label>
-            <select
-              value={serverId}
-              onChange={(e) => setServerId(e.target.value)}
-              className={`px-3 py-2 rounded-xl bg-[#20242a] text-slate-200 border ${colors.border}`}
-              title="Choisissez votre serveur (les prix sont segmentés)"
-            >
-              <option value="Brial">Brial</option>
-              <option value="Dakal">Dakal</option>
-              <option value="Draconiros">Draconiros</option>
-              <option value="Hell Mina">Hell Mina</option>
-              <option value="Imagiro">Imagiro</option>
-              <option value="Kourial">Kourial</option>
-              <option value="Mikhal">Mikhal</option>
-              <option value="Orukam">Orukam</option>
-              <option value="Rafal">Rafal</option>
-              <option value="Salar">Salar</option>
-              <option value="Shadow">Shadow</option>
-              <option value="Tal Kasha">Tal Kasha</option>
-              <option value="Tylezia">Tylezia</option>
-            </select>
-          </div>
-          <button
-            onClick={() => setShowDebug((v) => !v)}
-            className={`px-3 py-2 rounded-xl bg-[#20242a] text-slate-300 border ${colors.border} hover:border-emerald-500 text-sm`}
-          >
-            Debug
-          </button>
-          <button
-            onClick={clearAll}
-            className={`px-3 py-2 rounded-xl bg-[#20242a] text-slate-300 border ${colors.border} hover:border-emerald-500 text-sm`}
-          >
-            Vider l'accueil
-          </button>
-          <button
-            onClick={() => setOpenSave(true)}
-            disabled={!user}
-            className={`px-3 py-2 rounded-xl ${user ? "bg-emerald-600 hover:bg-emerald-500" : "bg-emerald-900/40"} text-white text-sm`}
-          >
-            Enregistrer
-          </button>
-          <button
-            onClick={() => setOpenLoad(true)}
-            disabled={!user}
-            className={`px-3 py-2 rounded-xl ${user ? "bg-white/10 hover:bg-white/15" : "bg-white/5"} text-slate-200 text-sm border ${colors.border}`}
-          >
-            Charger
-          </button>
-
-          <button
-            onClick={refreshCommunityPricesForAll}
-            disabled={!items.length}
-            className={`px-3 py-2 rounded-xl bg-[#20242a] text-slate-200 border ${colors.border} hover:border-emerald-500 text-sm`}
-            title="Écrase vos prix locaux avec les derniers prix communautaires"
-          >
-            Rafraîchir les prix
-          </button>
-
-          {/* Partage */}
-          <button
-            onClick={shareByLink}
-            className="ml-auto px-3 py-2 rounded-xl bg-white/10 hover:bg-white/15 text-slate-200 text-sm border border-white/10"
-          >
-            Partager (lien)
-          </button>
-          <button
-            onClick={exportJSON}
-            className="px-3 py-2 rounded-xl bg-white/10 hover:bg-white/15 text-slate-200 text-sm border border-white/10"
-          >
-            Export JSON
-          </button>
-          <button
-            onClick={importJSON}
-            className="px-3 py-2 rounded-xl bg-white/10 hover:bg-white/15 text-slate-200 text-sm border border-white/10"
-          >
-            Import JSON
-          </button>
-        </div>
+        {/* Menu principal réorganisé */}
+        <MainMenu
+          // Configuration
+          serverId={serverId}
+          setServerId={setServerId}
+          showDebug={showDebug}
+          setShowDebug={setShowDebug}
+          
+          // Actions principales
+          onClearAll={clearAll}
+          onSave={() => setOpenSave(true)}
+          onLoad={() => setOpenLoad(true)}
+          user={user}
+          
+          // Données
+          onRefreshPrices={refreshCommunityPricesForAll}
+          itemsCount={items.length}
+          onOpenComparison={() => setOpenComparison(true)}
+          selectedForComparison={selectedForComparison}
+          onOpenFavorites={() => setOpenFavorites(true)}
+          favoritesCount={favorites.size}
+          favoritesLoading={favoritesLoading}
+          
+          // Export/Partage
+          onShareByLink={shareByLink}
+          onExportJSON={exportJSON}
+          onImportJSON={importJSON}
+        />
 
         {/* Filtres (on enlève le checkbox “craftables”) */}
         <div className={`mb-4 rounded-2xl border ${colors.border} ${colors.panel} p-3`}>
@@ -636,16 +834,63 @@ export default function App() {
         </div>
 
         {/* Barre de recherche */}
-        <SearchBar
-          query={query}
-          setQuery={setQuery}
-          suggestions={suggestions}
-          loading={loadingSuggest}
-          onChoose={addItem}
-        />
+        <div className="relative">
+          <SearchBar
+            query={query}
+            setQuery={setQuery}
+            loading={loadingSuggest}
+            onFocus={() => {
+              if (searchHistory.length > 0 || favoriteItems.length > 0) {
+                setShowSuggestions(true);
+              }
+            }}
+          />
+          
+          {/* Message de limite d'items */}
+          {showLimitMessage && (
+            <div className="absolute top-full left-0 right-0 mt-2 bg-orange-500/90 text-white text-sm px-3 py-2 rounded-lg shadow-lg z-50 animate-fade-in">
+              ⚠️ Limite atteinte : Maximum 20 items autorisés. Supprimez un item pour en ajouter un nouveau.
+            </div>
+          )}
+          
+          {showSuggestions && (
+            <SearchSuggestions
+              suggestions={suggestions}
+              searchHistory={searchHistory}
+              favorites={favorites}
+              items={favoriteItems}
+              query={query}
+              onSelectItem={(item) => {
+                addItem(item);
+                setShowSuggestions(false);
+              }}
+              onSelectHistory={(query) => {
+                setQuery(query);
+                setShowSuggestions(false);
+              }}
+              onSelectFavorite={(item) => {
+                addItem(item);
+                setShowSuggestions(false);
+              }}
+              loading={loadingSuggest}
+              onClose={() => setShowSuggestions(false)}
+            />
+          )}
+        </div>
 
-        {/* FIL d’objets */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-2 gap-4">
+        {/* Compteur d'items */}
+        <div className="mb-4 text-center">
+          <div className="inline-flex items-center gap-2 px-3 py-1 bg-slate-800/50 rounded-full text-sm text-slate-300">
+            <span className="text-emerald-400 font-semibold">{items.length}</span>
+            <span>/ 20 items</span>
+            {items.length >= 20 && (
+              <span className="text-orange-400 text-xs">⚠️ Limite atteinte</span>
+            )}
+          </div>
+        </div>
+
+        {/* FIL d'objets */}
+        <div id="items-section" className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-2 gap-4">
           {items.map((it) => (
             <ItemCard
               key={it.key}
@@ -656,6 +901,11 @@ export default function App() {
               onUpdateCraftCount={updateCraftCount}
               onUpdateIngredientPrice={updateIngredientPrice}
               onCommitIngredientPrice={commitIngredientPrice}
+              onToggleComparison={toggleComparison}
+              isSelectedForComparison={selectedForComparison.has(it.key)}
+              onToggleFavorite={toggleFavorite}
+              isFavorite={favorites.has(it.ankamaId)}
+              serverId={serverId}
               taxRate={TAX_RATE}
               computeInvestment={computeInvestment}
               computeNetRevenue={computeNetRevenue}
@@ -667,18 +917,20 @@ export default function App() {
 
         {/* 🛒 Shopping list — entre le fil et le comparatif */}
         {items.length > 0 && (
-          <div className="mt-6">
+          <div id="shopping-section" className="mt-6">
             <ShoppingList
               items={items}
               onUpdateIngredientPrice={updateIngredientPrice}
               onCommitIngredientPrice={commitIngredientPrice}
+              serverId={serverId}
             />
           </div>
         )}
 
         {/* Comparatif — maintenant dès 1 item */}
         {items.length >= 1 && (
-          <ComparisonTable
+          <div id="comparison-section">
+            <ComparisonTable
             items={items}
             sort={sort}
             setSort={setSort}
@@ -689,8 +941,17 @@ export default function App() {
             computeTax={computeTax}
             computeNetRevenue={computeNetRevenue}
           />
+          </div>
         )}
       </div>
+
+      {/* Navigation flottante */}
+      <FloatingNav
+        onScrollToShoppingList={scrollToShoppingList}
+        onScrollToComparison={scrollToComparison}
+        itemsCount={items.length}
+        comparisonCount={selectedForComparison.size}
+      />
 
       {/* Modales */}
       <SaveDialog
@@ -719,6 +980,28 @@ export default function App() {
           setSessionIconUrl(icon?.url || null);
           restoreFromSnapshot(data); // => pendingPrefill = true -> fetch communautaire auto
         }}
+      />
+      
+      {/* Modal de comparaison des prix */}
+      <PriceComparisonModal
+        open={openComparison}
+        onClose={() => setOpenComparison(false)}
+        items={items}
+        selectedKeys={selectedForComparison}
+        serverId={serverId}
+      />
+      
+      {/* Modal des favoris */}
+      <FavoritesModal
+        open={openFavorites}
+        onClose={() => setOpenFavorites(false)}
+        favorites={favorites}
+        items={favoriteItems}
+        onAddItem={addItem}
+        onRemoveFavorite={removeFavorite}
+        itemTypes={Object.values(itemTypesMap)}
+        breeds={breeds}
+        onLoadFavoriteItems={loadFavoriteItems}
       />
     </div>
   );

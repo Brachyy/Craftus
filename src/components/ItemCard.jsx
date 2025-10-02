@@ -2,6 +2,9 @@ import React, { useEffect, useMemo, useState } from "react";
 import { colors } from "../theme/colors";
 import { currency, itemLevel, toInt } from "../lib/utils";
 import PriceHistoryHover, { PRICE_KIND } from "./PriceHistoryHover";
+import PriceWarning, { getInputColor } from "./PriceWarning";
+import { getCommunityPrice } from "../lib/communityPrices";
+import { detectAnomaly } from "../lib/anomalyDetection";
 
 export default function ItemCard({
   it,
@@ -11,11 +14,63 @@ export default function ItemCard({
   onUpdateIngredientPrice,
   onCommitIngredientPrice,
   onCommitSellPrice,
+  onToggleComparison,
+  isSelectedForComparison,
+  onToggleFavorite,
+  isFavorite = false,
+  serverId, // Ajouter serverId pour les warnings
 }) {
   const [sticky, setSticky] = useState(null);
+  const [ingredientPrices, setIngredientPrices] = useState({});
+  const [forceRender, setForceRender] = useState(0); // Pour forcer le re-rendu
 
   const openSticky = (kind, id, title) => setSticky({ kind, id, title });
   const closeSticky = () => setSticky(null);
+
+  // Calculer les fluctuations pour chaque ingrédient avec useMemo
+  const ingredientFluctuations = useMemo(() => {
+    const fluctuations = {};
+    if (!serverId || !it.ingredients) return fluctuations;
+    
+    for (const ing of it.ingredients) {
+      if (ing.unitPrice && ingredientPrices[ing.ankamaId]?.history?.length > 0) {
+        // Extraire les prix des objets history
+        const prices = ingredientPrices[ing.ankamaId].history.map(h => {
+          if (typeof h === 'object') {
+            return h.p || h.price || h.value || h.amount || h;
+          }
+          return h;
+        });
+        
+        const anomaly = detectAnomaly(ing.unitPrice, prices);
+        fluctuations[ing.ankamaId] = anomaly.fluctuation;
+      } else {
+        fluctuations[ing.ankamaId] = 0;
+      }
+    }
+    return fluctuations;
+  }, [serverId, it.ingredients, ingredientPrices, forceRender]);
+
+  // Charger les données de prix communautaires pour les ingrédients
+  useEffect(() => {
+    if (!serverId || !it.ingredients) return;
+    
+      const loadIngredientPrices = async () => {
+        const prices = {};
+        for (const ing of it.ingredients) {
+          try {
+            const priceData = await getCommunityPrice(PRICE_KIND.ING, ing.ankamaId, serverId);
+            prices[ing.ankamaId] = priceData;
+          } catch (error) {
+            console.warn(`Erreur chargement prix ingrédient ${ing.ankamaId}:`, error);
+          }
+        }
+        setIngredientPrices(prices);
+        setForceRender(prev => prev + 1); // Forcer le re-rendu
+      };
+    
+    loadIngredientPrices();
+  }, [serverId, it.ingredients]);
 
   // Échap pour fermer le graphe fixe
   useEffect(() => {
@@ -24,6 +79,7 @@ export default function ItemCard({
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [sticky]);
+
 
   const craftCount = Math.max(1, Number(it.craftCount || 1));
 
@@ -71,6 +127,7 @@ export default function ItemCard({
               title={`Évolution · ${it.displayName}`}
               width={460}
               height={240}
+              serverId={serverId}
             >
               <img
                 src={it.img}
@@ -98,31 +155,40 @@ export default function ItemCard({
                   title={`Évolution · ${it.displayName}`}
                   width={460}
                   height={240}
+                  serverId={serverId}
                 >
                   <span className="group-hover:font-semibold transition">
                     {it.displayName}
                   </span>
                 </PriceHistoryHover>
               </button>
+              {(it.type?.name?.fr || it.typeName) && (
+                <span className="text-sm text-slate-400 ml-2">
+                  • {it.type?.name?.fr || it.typeName}
+                </span>
+              )}
             </div>
 
             <div className="flex items-center gap-2 text-sm text-slate-300">
               <span>Niveau {itemLevel(it) ?? it.level ?? "?"}</span>
-              {it.jobName && (
+              {(it.jobName || it.breed?.name?.fr) && (
                 <>
                   <span className="opacity-60">•</span>
                   <span className="inline-flex items-center gap-1">
-                    {it.jobIconUrl && (
-                      <img
-                        src={it.jobIconUrl}
-                        alt=""
-                        className="w-4 h-4 rounded object-contain"
-                        onError={(e) => (e.currentTarget.style.display = "none")}
-                        draggable="false"
-                      />
+                    <img
+                      src={it.jobIconUrl || it.breed?.img || "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTYiIGhlaWdodD0iMTYiIHZpZXdCb3g9IjAgMCAxNiAxNiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjE2IiBoZWlnaHQ9IjE2IiBmaWxsPSIjNjY2NjY2IiBzdHJva2U9IiM5OTk5OTkiIHN0cm9rZS13aWR0aD0iMSIvPgo8dGV4dCB4PSI4IiB5PSIxMiIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjEwIiBmaWxsPSIjZmZmZmZmIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj7wn5GAPC90ZXh0Pgo8L3N2Zz4K"}
+                      alt=""
+                      className="w-4 h-4 rounded object-contain"
+                      onError={(e) => {
+                        e.currentTarget.src = "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTYiIGhlaWdodD0iMTYiIHZpZXdCb3g9IjAgMCAxNiAxNiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjE2IiBoZWlnaHQ9IjE2IiBmaWxsPSIjNjY2NjY2IiBzdHJva2U9IiM5OTk5OTkiIHN0cm9rZS13aWR0aD0iMSIvPgo8dGV4dCB4PSI4IiB5PSIxMiIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjEwIiBmaWxsPSIjZmZmZmZmIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj7wn5GAPC90ZXh0Pgo8L3N2Zz4K";
+                        e.currentTarget.style.border = "1px solid #666";
+                      }}
+                      draggable="false"
+                    />
+                    {it.jobName || it.breed?.name?.fr}
+                    {(it.jobLevel != null || it.job?.level != null) && (
+                      <span className="opacity-70">({it.jobLevel || it.job?.level})</span>
                     )}
-                    {it.jobName}
-                    {it.jobLevel != null && <span className="opacity-70">({it.jobLevel})</span>}
                   </span>
                 </>
               )}
@@ -130,12 +196,36 @@ export default function ItemCard({
           </div>
         </div>
 
-        <button
-          onClick={() => onRemove?.(it.key)}
-          className="shrink-0 rounded-xl bg-rose-900/30 text-rose-300 hover:bg-rose-900/50 px-3 py-2 text-sm"
-        >
-          Retirer
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => onToggleFavorite?.(it.key)}
+            className={`p-1 rounded-lg transition-colors ${
+              isFavorite 
+                ? 'text-yellow-400 hover:text-yellow-300' 
+                : 'text-slate-400 hover:text-yellow-400'
+            }`}
+            title={isFavorite ? "Retirer des favoris" : "Ajouter aux favoris"}
+          >
+            {isFavorite ? '★' : '☆'}
+          </button>
+          <label className="mt-1 relative inline-flex items-center cursor-pointer select-none h-6">
+            <input
+              type="checkbox"
+              className="sr-only peer"
+              checked={isSelectedForComparison}
+              onChange={() => onToggleComparison?.(it.key)}
+            />
+            <span className="relative w-10 h-6 rounded-full bg-[#1b1f26] border border-white/10 peer-checked:bg-emerald-600 transition-colors"></span>
+            <span className="absolute top-1/2 left-[4px] -translate-y-1/2 h-5 w-5 rounded-full bg-[#0b0f14] border border-white/10 transition-transform peer-checked:translate-x-4"></span>
+            <span className="ml-2 text-xs text-slate-300">Comparer</span>
+          </label>
+          <button
+            onClick={() => onRemove?.(it.key)}
+            className="shrink-0 rounded-xl bg-rose-900/30 text-rose-300 hover:bg-rose-900/50 px-3 py-2 text-sm"
+          >
+            Retirer
+          </button>
+        </div>
       </div>
 
       {/* PRIX & QUANTITÉ */}
@@ -220,6 +310,7 @@ export default function ItemCard({
                   title={`Évolution · ${ing.name}`}
                   width={420}
                   height={220}
+                  serverId={serverId}
                 >
                   <img
                     src={ing.img}
@@ -246,6 +337,7 @@ export default function ItemCard({
                     title={`Évolution · ${ing.name}`}
                     width={420}
                     height={220}
+                    serverId={serverId}
                   >
                     <div className="leading-tight cursor-default group">
                       <div
@@ -260,20 +352,53 @@ export default function ItemCard({
                 </button>
               </div>
 
-              <div className="w-40">
-                <input
-                  type="text"
-                  inputMode="numeric"
-                  className="h-9 w-full rounded-lg bg-[#1b1f26] border border-white/10 px-2 text-sm text-right"
-                  value={ing.unitPrice ?? ""}
-                  onFocus={handleFocus}
-                  onChange={(e) => onUpdateIngredientPrice?.(it.key, ing.ankamaId, toInt(e.target.value))}
-                  onBlur={() => {
-                    if (onCommitIngredientPrice && ing.unitPrice != null && Number.isFinite(Number(ing.unitPrice))) {
-                      onCommitIngredientPrice(it.key, ing.ankamaId);
-                    }
-                  }}
-                />
+              <div className="flex items-center gap-2">
+                {/* Input de prix avec couleur selon fluctuation */}
+                <div className="w-28">
+                  {(() => {
+                    // Utiliser la fluctuation mémorisée
+                    const fluctuation = ingredientFluctuations[ing.ankamaId] || 0;
+                    
+                    // Appliquer les couleurs selon la fluctuation avec Tailwind CSS
+                    let inputClass = "h-9 w-full rounded-lg border px-2 text-sm text-right";
+                    
+                    if (fluctuation <= 20) {
+                        inputClass += " border-emerald-500/50 bg-black/50"; // Vert avec transparence
+                      } else if (fluctuation <= 50) {
+                        inputClass += " border-amber-500/50 bg-black/50"; // Jaune avec transparence
+                      } else if (fluctuation <= 100) {
+                        inputClass += " border-orange-500/50 bg-black/50"; // Orange avec transparence
+                      } else {
+                        inputClass += " border-red-500/50 bg-black/50"; // Rouge avec transparence
+                      }
+                    
+                    return (
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        className={inputClass}
+                        value={ing.unitPrice ?? ""}
+                        onFocus={handleFocus}
+                        onChange={(e) => onUpdateIngredientPrice?.(it.key, ing.ankamaId, toInt(e.target.value))}
+                        onBlur={() => {
+                          if (onCommitIngredientPrice && ing.unitPrice != null && Number.isFinite(Number(ing.unitPrice))) {
+                            onCommitIngredientPrice(it.key, ing.ankamaId);
+                          }
+                        }}
+                      />
+                    );
+                  })()}
+                </div>
+                
+                {/* Warnings à côté de l'input */}
+                {ing.unitPrice && serverId && (
+                  <PriceWarning
+                    currentPrice={ing.unitPrice}
+                    priceHistory={ingredientPrices[ing.ankamaId]?.history || []}
+                    lastPriceDate={ingredientPrices[ing.ankamaId]?.lastAt}
+                    serverId={serverId}
+                  />
+                )}
               </div>
 
                 <div className="justify-self-start">
@@ -370,6 +495,7 @@ export default function ItemCard({
                 id={sticky.id}
                 title={sticky.title}
                 staticOpen={true}
+                serverId={serverId}
               />
               <div className="text-xs text-slate-500 mt-2">
                 Survolez la zone pour inspecter précisément le graphe. Échap pour fermer.

@@ -1,0 +1,52 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Sessions utilisateur
+    match /users/{uid}/sessions/{sid} {
+      allow read, write: if request.auth != null && request.auth.uid == uid;
+    }
+
+    // Prix communautaires
+    match /publicPrices/{docId} {
+      allow read: if true;
+
+      function isAuthed() { return request.auth != null; }
+
+      function validServer() {
+        return docId.matches('^(Brial|Dakal|Draconiros|Hell Mina|Imagiro|Kourial|Mikhal|Orukam|Rafal|Salar|Shadow|Tal Kasha|Tylezia)_(ing|sell)_[0-9]+$');
+      }
+
+      function isValidHistEntry(e) {
+        return e is map && e.t is timestamp && e.p is number && e.p >= 0;
+      }
+
+      function isValidPriceDoc() {
+        return request.resource.data.kind in ['ing','sell']
+          && request.resource.data.itemId is int
+          && request.resource.data.lastPrice is number && request.resource.data.lastPrice >= 0
+          && (request.resource.data.lastAt == null || request.resource.data.lastAt is timestamp)
+          && (request.resource.data.lastUserId == null || request.resource.data.lastUserId is string)
+          && request.resource.data.history is list
+          && request.resource.data.history.size() <= 50
+          && (request.resource.data.history.size() == 0
+              || isValidHistEntry(request.resource.data.history[request.resource.data.history.size() - 1]));
+      }
+
+      allow create, update: if isAuthed() && validServer() && isValidPriceDoc();
+      allow delete: if false;
+    }
+
+    // Favoris utilisateur
+    match /userFavorites/{docId} {
+      allow read, write: if request.auth != null && request.auth.uid == resource.data.uid;
+      allow create: if request.auth != null && request.auth.uid == request.resource.data.uid
+        && request.resource.data.keys().hasAll(['uid', 'itemId', 'addedAt'])
+        && request.resource.data.uid is string
+        && request.resource.data.itemId is int
+        && request.resource.data.addedAt is timestamp;
+      // Permettre la lecture de tous les documents pour le filtrage côté client
+      allow read: if request.auth != null;
+    }
+  }
+}

@@ -24,18 +24,52 @@ export async function getCommunityPrice(kind, itemId, serverId) {
   try {
     const snap = await getDoc(priceDocRef(serverId, kind, itemId));
     if (!snap.exists()) {
-      return { lastPrice: null, lastAt: null, history: [] };
+      return { 
+        lastPrice: null, 
+        lastAt: null, 
+        history: [],
+        metrics: null
+      };
     }
     const d = snap.data();
     const history = Array.isArray(d.history) ? d.history : [];
+    
+    // Calculer les métriques si on a un historique
+    let metrics = null;
+    if (history.length > 0) {
+      const validPrices = history
+        .filter(h => h && typeof h.p === 'number' && h.p > 0)
+        .map(h => h.p);
+      
+      if (validPrices.length > 0) {
+        const average = validPrices.reduce((sum, p) => sum + p, 0) / validPrices.length;
+        const sortedPrices = [...validPrices].sort((a, b) => a - b);
+        const median = sortedPrices[Math.floor(sortedPrices.length / 2)];
+        
+        metrics = {
+          average: Math.round(average),
+          median: Math.round(median),
+          count: validPrices.length,
+          min: Math.min(...validPrices),
+          max: Math.max(...validPrices)
+        };
+      }
+    }
+    
     return {
       lastPrice: typeof d.lastPrice === "number" ? d.lastPrice : null,
       lastAt: d.lastAt ?? null,
       history,
+      metrics
     };
   } catch (e) {
     console.error("[communityPrices:getCommunityPrice] error", { serverId, kind, itemId, e });
-    return { lastPrice: null, lastAt: null, history: [] };
+    return { 
+      lastPrice: null, 
+      lastAt: null, 
+      history: [],
+      metrics: null
+    };
   }
 }
 
