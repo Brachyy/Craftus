@@ -1,0 +1,80 @@
+═══════════════════════════════════════════════════════════════════
+                    SHA-1 POUR FIREBASE - CRAFTUS
+═══════════════════════════════════════════════════════════════════
+
+🔐 SHA-1 DE LA CLÉ RELEASE (Production)
+═════════════════════════════════════════
+SHA-1   : 92:74:3E:78:87:38:9C:91:61:20:65:60:41:AD:24:C3:61:B7:A6:C4
+SHA-256 : E6:D8:A9:66:52:19:84:D4:D0:CD:A0:6A:38:65:84:29:98:06:CE:D8:40:65:55:F2:E4:D6:4A:3A:3B:8E:3B:AF
+
+📱 SHA-1 DE LA CLÉ DEBUG (Tests/Développement)
+═════════════════════════════════════════════════
+SHA-1   : 87:42:27:AE:B5:69:CB:5A:3C:38:F8:1E:B6:40:90:74:0E:89:F5:97
+SHA-256 : 7B:08:9D:69:A0:AE:CE:0E:BB:FB:D3:F1:DE:C3:37:98:93:CF:70:47:FB:09:C7:F9:3C:1F:78:72:CD:51:E7:2A
+
+⚠️ IMPORTANT : Utilisez le SHA-1 DEBUG pour les tests sur émulateur !
+
+
+═══════════════════════════════════════════════════════════════════
+📋 ÉTAPES POUR CONFIGURER FIREBASE
+═══════════════════════════════════════════════════════════════════
+
+1️⃣ RÉCUPÉRER LE WEB CLIENT ID
+   • Allez sur : https://console.firebase.google.com
+   • Sélectionnez votre projet Craftus
+   • Authentication > Sign-in method
+   • Google > Modifier > Développer "Configuration du SDK Web"
+   • Copiez le "Web client ID"
+   • Format : 123456789-xxxxxx.apps.googleusercontent.com
+
+2️⃣ MODIFIER capacitor.config.ts
+   • Ouvrez : capacitor.config.ts
+   • Remplacez 'VOTRE_WEB_CLIENT_ID.apps.googleusercontent.com'
+   • Par votre vrai Web Client ID
+
+3️⃣ AJOUTER L'APPLICATION ANDROID À FIREBASE
+   • Firebase Console > Paramètres du projet
+   • "Vos applications" > Ajoutez une application > Android
+   • Package Android : com.craftus.app
+   • Nom de l'app : Craftus
+
+4️⃣ AJOUTER LES SHA-1 DANS FIREBASE
+   • Dans les paramètres de l'app Android
+   • Section "Empreintes de certificat"
+   • Cliquez sur "Ajouter une empreinte"
+   • Ajoutez le SHA-1 DEBUG : 87:42:27:AE:B5:69:CB:5A:3C:38:F8:1E:B6:40:90:74:0E:89:F5:97
+   • Cliquez à nouveau sur "Ajouter une empreinte"
+   • Ajoutez le SHA-1 RELEASE : 92:74:3E:78:87:38:9C:91:61:20:65:60:41:AD:24:C3:61:B7:A6:C4
+   • ⚠️ Les DEUX empreintes sont nécessaires (debug pour tests, release pour production)
+
+5️⃣ TÉLÉCHARGER google-services.json
+   • Après avoir ajouté les SHA-1
+   • Téléchargez le fichier google-services.json
+   • Remplacez : android/app/google-services.json
+
+6️⃣ REBUILD L'APPLICATION
+   npm run build
+   npx cap sync
+   cd android && ./gradlew clean && ./gradlew assembleDebug
+   cd ..
+   adb install -r android/app/build/outputs/apk/debug/app-debug.apk
+
+7️⃣ TESTER L'AUTHENTIFICATION
+   • Lancez l'app : adb shell am start -n com.craftus.app/.MainActivity
+   • Cliquez sur "Se connecter avec Google"
+   • Une fenêtre NATIVE Android devrait apparaître (pas un navigateur)
+   • Sélectionnez votre compte Google
+   • ✅ Authentification réussie !
+
+
+═══════════════════════════════════════════════════════════════════
+⚠️  IMPORTANT
+═══════════════════════════════════════════════════════════════════
+
+• Le SHA-1 est UNIQUE à votre keystore
+• Ne partagez JAMAIS votre fichier craftus-release-key.keystore
+• Sauvegardez ce keystore en lieu sûr
+• Sans lui, vous ne pourrez plus mettre à jour l'app sur le Play Store
+
+═══════════════════════════════════════════════════════════════════
+

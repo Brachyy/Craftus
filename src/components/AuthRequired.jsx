@@ -1,7 +1,7 @@
 import React from 'react';
 import { colors } from '../theme/colors';
 
-const AuthRequired = ({ onSignIn }) => {
+const AuthRequired = ({ onSignIn, onSkipAuth }) => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center p-4">
       {/* Background Pattern */}
@@ -60,6 +60,19 @@ const AuthRequired = ({ onSignIn }) => {
             </svg>
             <span>Se connecter avec Google</span>
           </button>
+
+          {/* Bouton Mode Test */}
+          {onSkipAuth && (
+            <button
+              onClick={onSkipAuth}
+              className="w-full mt-3 bg-slate-700/50 hover:bg-slate-700 text-slate-300 font-medium py-3 px-4 rounded-xl transition-all duration-200 flex items-center justify-center gap-3 border border-slate-600/50 hover:border-slate-500"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+              </svg>
+              <span>Mode Test (sans connexion)</span>
+            </button>
+          )}
 
           {/* Informations de sécurité */}
           <div className="mt-6 pt-6 border-t border-slate-700/50">

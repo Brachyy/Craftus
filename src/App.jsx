@@ -104,6 +104,7 @@ export default function App() {
   // Authentification
   const [user, setUser] = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
+  const [testMode, setTestMode] = useState(false); // Mode test sans authentification
 
   // Filtres visibles
   const [equipmentOnly, setEquipmentOnly] = useState(false);
@@ -724,8 +725,14 @@ export default function App() {
     return <AuthLoading />;
   }
 
-  if (!user) {
-    return <AuthRequired onSignIn={signInWithGoogle} />;
+  if (!user && !testMode) {
+    return <AuthRequired 
+      onSignIn={signInWithGoogle} 
+      onSkipAuth={() => {
+        setTestMode(true);
+        setAuthLoading(false);
+      }}
+    />;
   }
 
   return (

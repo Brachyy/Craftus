@@ -1,0 +1,77 @@
+═══════════════════════════════════════════════════════════════════
+                    INFORMATIONS CRITIQUES - CRAFTUS
+             ⚠️  SAUVEGARDEZ CE FICHIER EN LIEU SÛR  ⚠️
+═══════════════════════════════════════════════════════════════════
+
+📱 IDENTIFIANTS DE L'APPLICATION
+═════════════════════════════════
+Package Name : com.craftus.app
+App Name     : Craftus
+Version Code : 1
+Version Name : 1.0.0
+
+
+🔐 KEYSTORE DE SIGNATURE (CRITIQUE!)
+═════════════════════════════════════
+Fichier      : android/app/craftus-release-key.keystore
+Store Pass   : craftus2025
+Key Alias    : craftus-key
+Key Pass     : craftus2025
+
+⚠️  SANS CE KEYSTORE, VOUS NE POURREZ PLUS METTRE À JOUR L'APP !
+⚠️  SAUVEGARDEZ-LE SUR PLUSIEURS SUPPORTS (cloud sécurisé, clé USB, etc.)
+
+
+📦 FICHIERS À UPLOADER SUR LE PLAY STORE
+═════════════════════════════════════════
+AAB (Android App Bundle) :
+  android/app/build/outputs/bundle/release/app-release.aab
+  Taille : 3.2 MB
+
+
+🔥 FIREBASE
+═══════════
+Project ID : (à récupérer de votre Firebase Console)
+
+Configuration Android à faire :
+1. Ajouter app Android dans Firebase Console
+2. Package name : com.craftus.app
+3. Télécharger google-services.json
+4. Placer dans : android/app/google-services.json
+
+
+📋 COMMANDES ESSENTIELLES
+═══════════════════════════
+Build complet :
+  npm run build && npm run cap:sync && cd android && ./gradlew bundleRelease
+
+Test local :
+  adb install android/app/build/outputs/apk/release/app-release.apk
+
+
+🔄 POUR METTRE À JOUR L'APP
+════════════════════════════
+1. Modifier android/app/build.gradle :
+   versionCode 2 (incrémenter)
+   versionName "1.1.0"
+
+2. Rebuild :
+   npm run build
+   npm run cap:sync
+   cd android && ./gradlew bundleRelease
+
+3. Upload le nouvel AAB sur Play Console
+
+
+📞 LIENS IMPORTANTS
+════════════════════
+Play Console        : https://play.google.com/console
+Firebase Console    : https://console.firebase.google.com
+Doc Capacitor       : https://capacitorjs.com/docs
+Support Play Store  : https://support.google.com/googleplay/android-developer
+
+
+═══════════════════════════════════════════════════════════════════
+Date de création : 2 octobre 2025
+═══════════════════════════════════════════════════════════════════
+
