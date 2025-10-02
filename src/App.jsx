@@ -24,6 +24,7 @@ import LoadDialog from "./sessions/LoadDialog";
 import PriceComparisonModal from "./components/PriceComparisonModal";
 import SearchSuggestions from "./components/SearchSuggestions";
 import FavoritesModal from "./components/FavoritesModal";
+import HelpModal from "./components/HelpModal";
 import MainMenu from "./components/MainMenu";
 import AuthRequired from "./components/AuthRequired";
 import AuthLoading from "./components/AuthLoading";
@@ -162,6 +163,7 @@ export default function App() {
   // Modales sessions
   const [openSave, setOpenSave] = useState(false);
   const [openLoad, setOpenLoad] = useState(false);
+  const [openHelp, setOpenHelp] = useState(false);
   const [currentSessionId, setCurrentSessionId] = useState(null);
 
   // Icône de la session courante
@@ -381,6 +383,10 @@ export default function App() {
     addToSearchHistory(raw.displayName || raw.name?.fr || "");
   }
 
+  // Fonction pour forcer le rechargement des données communautaires
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const triggerRefresh = () => setRefreshTrigger(prev => prev + 1);
+
   // Rafraîchir tous les prix depuis la BDD communautaire (DESTRUCTIF après confirmation)
   async function refreshCommunityPricesForAll() {
     if (!items.length) return;
@@ -413,6 +419,11 @@ export default function App() {
         })
       );
       setItems(refreshed);
+      
+      // Déclencher un rechargement des données communautaires
+      setTimeout(() => {
+        triggerRefresh();
+      }, 500);
     } catch (e) {
       console.error("[refreshCommunityPricesForAll] failed", e);
     }
@@ -574,29 +585,60 @@ export default function App() {
   };
 
   // Commit vers BDD communautaire au blur
-  async function commitIngredientPrice(itemKey, ingId) {
+  async function commitIngredientPrice(itemKey, ingId, previousValue) {
     const it = items.find((x) => x.key === itemKey);
     if (!it) return;
     const ing = it.ingredients.find((g) => g.ankamaId === ingId);
     if (!ing) return;
     const v = Number(ing.unitPrice);
+    
+    // Vérifications d'optimisation
     if (!Number.isFinite(v) || v < 0) return;
+    if (v === 0) return; // Ne pas enregistrer les prix à zéro
+    if (previousValue !== undefined && v === previousValue) return; // Pas de changement
+    
     if (!auth.currentUser) {
       console.warn("[commit] ignoré: utilisateur non connecté");
       return;
     }
-    await pushCommunityPrice(PRICE_KIND.ING, ingId, v, auth.currentUser.uid, serverId);
+    
+    try {
+      await pushCommunityPrice(PRICE_KIND.ING, ingId, v, auth.currentUser.uid, serverId);
+      
+      // Déclencher un rechargement des données communautaires
+      setTimeout(() => {
+        triggerRefresh();
+      }, 1000);
+    } catch (error) {
+      console.error("Erreur lors du commit du prix ingrédient:", error);
+    }
   }
-  async function commitSellPrice(itemKey) {
+  
+  async function commitSellPrice(itemKey, previousValue) {
     const it = items.find((x) => x.key === itemKey);
     if (!it) return;
     const v = Number(it.sellPrice);
+    
+    // Vérifications d'optimisation
     if (!Number.isFinite(v) || v < 0) return;
+    if (v === 0) return; // Ne pas enregistrer les prix à zéro
+    if (previousValue !== undefined && v === previousValue) return; // Pas de changement
+    
     if (!auth.currentUser) {
       console.warn("[commit] ignoré: utilisateur non connecté");
       return;
     }
-    await pushCommunityPrice(PRICE_KIND.SELL, it.ankamaId, v, auth.currentUser.uid, serverId);
+    
+    try {
+      await pushCommunityPrice(PRICE_KIND.SELL, it.ankamaId, v, auth.currentUser.uid, serverId);
+      
+      // Déclencher un rechargement des données communautaires
+      setTimeout(() => {
+        triggerRefresh();
+      }, 1000);
+    } catch (error) {
+      console.error("Erreur lors du commit du prix de vente:", error);
+    }
   }
 
   // Snapshot / restore sessions (on ne sauvegarde plus les prix : ils viennent de la BDD)
@@ -749,7 +791,16 @@ export default function App() {
               />
             )}
           </div>
-          <AuthBar user={user} />
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setOpenHelp(true)}
+              className="p-2 text-slate-400 hover:text-slate-200 hover:bg-slate-700/50 rounded-lg transition-colors"
+              title="Aide et guide d'utilisation"
+            >
+              ❓
+            </button>
+            <AuthBar user={user} />
+          </div>
         </header>
 
         {/* Debug */}
@@ -906,6 +957,7 @@ export default function App() {
               onToggleFavorite={toggleFavorite}
               isFavorite={favorites.has(it.ankamaId)}
               serverId={serverId}
+              refreshTrigger={refreshTrigger}
               taxRate={TAX_RATE}
               computeInvestment={computeInvestment}
               computeNetRevenue={computeNetRevenue}
@@ -923,6 +975,7 @@ export default function App() {
               onUpdateIngredientPrice={updateIngredientPrice}
               onCommitIngredientPrice={commitIngredientPrice}
               serverId={serverId}
+              refreshTrigger={refreshTrigger}
             />
           </div>
         )}
@@ -949,8 +1002,10 @@ export default function App() {
       <FloatingNav
         onScrollToShoppingList={scrollToShoppingList}
         onScrollToComparison={scrollToComparison}
+        onOpenGraphComparison={() => setOpenComparison(true)}
         itemsCount={items.length}
         comparisonCount={selectedForComparison.size}
+        selectedForComparisonCount={selectedForComparison.size}
       />
 
       {/* Modales */}
@@ -1002,6 +1057,12 @@ export default function App() {
         itemTypes={Object.values(itemTypesMap)}
         breeds={breeds}
         onLoadFavoriteItems={loadFavoriteItems}
+      />
+      
+      {/* Modal d'aide */}
+      <HelpModal
+        isOpen={openHelp}
+        onClose={() => setOpenHelp(false)}
       />
     </div>
   );

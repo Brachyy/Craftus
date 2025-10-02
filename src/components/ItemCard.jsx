@@ -19,10 +19,12 @@ export default function ItemCard({
   onToggleFavorite,
   isFavorite = false,
   serverId, // Ajouter serverId pour les warnings
+  refreshTrigger = 0, // Nouveau prop pour déclencher le rechargement
 }) {
   const [sticky, setSticky] = useState(null);
   const [ingredientPrices, setIngredientPrices] = useState({});
   const [forceRender, setForceRender] = useState(0); // Pour forcer le re-rendu
+  const [previousValues, setPreviousValues] = useState({}); // Tracker les valeurs précédentes
 
   const openSticky = (kind, id, title) => setSticky({ kind, id, title });
   const closeSticky = () => setSticky(null);
@@ -55,22 +57,22 @@ export default function ItemCard({
   useEffect(() => {
     if (!serverId || !it.ingredients) return;
     
-      const loadIngredientPrices = async () => {
-        const prices = {};
-        for (const ing of it.ingredients) {
-          try {
-            const priceData = await getCommunityPrice(PRICE_KIND.ING, ing.ankamaId, serverId);
-            prices[ing.ankamaId] = priceData;
-          } catch (error) {
-            console.warn(`Erreur chargement prix ingrédient ${ing.ankamaId}:`, error);
-          }
+    const loadIngredientPrices = async () => {
+      const prices = {};
+      for (const ing of it.ingredients) {
+        try {
+          const priceData = await getCommunityPrice(PRICE_KIND.ING, ing.ankamaId, serverId);
+          prices[ing.ankamaId] = priceData;
+        } catch (error) {
+          console.warn(`Erreur chargement prix ingrédient ${ing.ankamaId}:`, error);
         }
-        setIngredientPrices(prices);
-        setForceRender(prev => prev + 1); // Forcer le re-rendu
-      };
+      }
+      setIngredientPrices(prices);
+      setForceRender(prev => prev + 1); // Forcer le re-rendu
+    };
     
     loadIngredientPrices();
-  }, [serverId, it.ingredients]);
+  }, [serverId, it.ingredients, refreshTrigger]); // Utiliser refreshTrigger au lieu de forceRender
 
   // Échap pour fermer le graphe fixe
   useEffect(() => {
@@ -235,12 +237,22 @@ export default function ItemCard({
           <input
             type="text"
             inputMode="numeric"
+            tabIndex={1}
             value={it.sellPrice ?? ""}
-            onFocus={handleFocus}
+            onFocus={(e) => {
+              handleFocus(e);
+              // Sauvegarder la valeur actuelle au focus
+              setPreviousValues(prev => ({
+                ...prev,
+                [`${it.key}_sellPrice`]: it.sellPrice
+              }));
+            }}
             onChange={(e) => onUpdateSellPrice?.(it.key, toInt(e.target.value))}
             onBlur={() => {
               if (onCommitSellPrice && it.sellPrice != null && Number.isFinite(Number(it.sellPrice))) {
-                onCommitSellPrice(it.key);
+                const key = `${it.key}_sellPrice`;
+                const previousValue = previousValues[key];
+                onCommitSellPrice(it.key, previousValue);
               }
             }}
             className="h-10 w-full rounded-xl bg-[#1b1f26] border border-white/10 px-3"
@@ -258,6 +270,7 @@ export default function ItemCard({
               inputMode="numeric"
               step="1"
               min="1"
+              tabIndex={2}
               className="h-10 w-full rounded-xl bg-[#1b1f26] border border-white/10 px-3"
               value={craftCount}
               onFocus={handleFocus}
@@ -376,13 +389,23 @@ export default function ItemCard({
                       <input
                         type="text"
                         inputMode="numeric"
+                        tabIndex={3}
                         className={inputClass}
                         value={ing.unitPrice ?? ""}
-                        onFocus={handleFocus}
+                        onFocus={(e) => {
+                          handleFocus(e);
+                          // Sauvegarder la valeur actuelle au focus
+                          setPreviousValues(prev => ({
+                            ...prev,
+                            [`${it.key}_${ing.ankamaId}`]: ing.unitPrice
+                          }));
+                        }}
                         onChange={(e) => onUpdateIngredientPrice?.(it.key, ing.ankamaId, toInt(e.target.value))}
                         onBlur={() => {
                           if (onCommitIngredientPrice && ing.unitPrice != null && Number.isFinite(Number(ing.unitPrice))) {
-                            onCommitIngredientPrice(it.key, ing.ankamaId);
+                            const key = `${it.key}_${ing.ankamaId}`;
+                            const previousValue = previousValues[key];
+                            onCommitIngredientPrice(it.key, ing.ankamaId, previousValue);
                           }
                         }}
                       />

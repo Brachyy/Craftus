@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 
-const FloatingNav = ({ onScrollToShoppingList, onScrollToComparison, itemsCount, comparisonCount }) => {
+const FloatingNav = ({ onScrollToShoppingList, onScrollToComparison, onOpenGraphComparison, itemsCount, comparisonCount, selectedForComparisonCount }) => {
   const [isVisible, setIsVisible] = useState(false);
   const [activeSection, setActiveSection] = useState('items');
 
@@ -77,6 +77,23 @@ const FloatingNav = ({ onScrollToShoppingList, onScrollToComparison, itemsCount,
             {comparisonCount}
           </div>
         )}
+      </button>
+
+      {/* Bouton Comparaison Graphiques */}
+      <button
+        onClick={onOpenGraphComparison}
+        disabled={selectedForComparisonCount < 2}
+        className={`group relative flex items-center gap-2 px-4 py-3 rounded-full shadow-lg transition-all duration-200 transform hover:scale-105 ${
+          selectedForComparisonCount >= 2
+            ? 'bg-slate-800/90 text-slate-300 hover:bg-slate-700/90'
+            : 'bg-slate-800/50 text-slate-500 cursor-not-allowed'
+        }`}
+        title={selectedForComparisonCount >= 2 ? "Comparer les graphiques de prix" : "Sélectionnez au moins 2 items pour comparer"}
+      >
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" />
+        </svg>
+        <span className="font-medium text-sm">Graphiques</span>
       </button>
 
       {/* Bouton Retour en haut */}

@@ -11,6 +11,7 @@ export default function ShoppingList({
   onUpdateIngredientPrice,
   onCommitIngredientPrice,
   serverId,
+  refreshTrigger = 0, // Nouveau prop pour déclencher le rechargement
 }) {
   // Overlay graphe "statique"
   const [sticky, setSticky] = useState(null);
@@ -26,6 +27,7 @@ export default function ShoppingList({
 
   // Brouillons pour "Prix total"
   const [totalDrafts, setTotalDrafts] = useState({});
+  const [previousValues, setPreviousValues] = useState({}); // Tracker les valeurs précédentes
   
   // Prix communautaires pour les ingrédients
   const [ingredientPrices, setIngredientPrices] = useState({});
@@ -79,7 +81,7 @@ export default function ShoppingList({
     };
 
     loadPrices();
-  }, [serverId, rows.length]);
+  }, [serverId, rows.length, refreshTrigger]); // Ajouter refreshTrigger comme dépendance
 
   // Calculer les fluctuations pour chaque ingrédient
   const ingredientFluctuations = useMemo(() => {
@@ -145,9 +147,9 @@ export default function ShoppingList({
       if (line) onUpdateIngredientPrice(it.key, ingId, v);
     }
   };
-  const commitOnce = (ingId) => {
+  const commitOnce = (ingId, previousValue) => {
     const it = items.find((it) => it.ingredients.some((x) => x.ankamaId === ingId));
-    if (it) onCommitIngredientPrice?.(it.key, ingId);
+    if (it) onCommitIngredientPrice?.(it.key, ingId, previousValue);
   };
 
   // gestion brouillons "total"
@@ -315,13 +317,24 @@ export default function ShoppingList({
                       inputMode="numeric"
                       className={`${inputClasses} w-36 text-right`}
                       value={Number.isFinite(unitRounded) ? unitRounded : ""}
-                      onFocus={handleFocus}
+                      onFocus={(e) => {
+                        handleFocus(e);
+                        // Sauvegarder la valeur actuelle au focus
+                        setPreviousValues(prev => ({
+                          ...prev,
+                          [`unit_${r.id}`]: r.unitPrice
+                        }));
+                      }}
                       onChange={(e) => {
                         const n = Number(e.target.value);
                         const unit = Number.isFinite(n) ? Math.max(0, Math.round(n)) : "";
                         propagateUnit(r.id, unit);
                       }}
-                      onBlur={() => commitOnce(r.id)}
+                      onBlur={() => {
+                        const key = `unit_${r.id}`;
+                        const previousValue = previousValues[key];
+                        commitOnce(r.id, previousValue);
+                      }}
                       onKeyDown={(e) => {
                         if (e.key === "Tab") {
                           e.preventDefault();

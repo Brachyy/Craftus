@@ -1,39 +1,185 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { colors } from '../theme/colors';
+import craftusLogo from '../assets/craftus.png';
+import craftus1 from '../assets/craftus1.png';
+import craftus2 from '../assets/craftus2.png';
+import craftus3 from '../assets/craftus3.png';
 
 const AuthRequired = ({ onSignIn }) => {
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center p-4">
-      {/* Background Pattern */}
-      <div className="absolute inset-0 opacity-5">
-        <div className="absolute inset-0" style={{
-          backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.1'%3E%3Ccircle cx='30' cy='30' r='2'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
-        }} />
-      </div>
+  const [currentImage, setCurrentImage] = useState(0);
+  
+  const images = [
+    {
+      src: craftus1,
+      title: "Calculatrice de Profit",
+      description: "Analysez la rentabilité de vos crafts Dofus",
+      gradient: "from-blue-500/20 to-purple-500/20",
+      emoji: "📊"
+    },
+    {
+      src: craftus2,
+      title: "Prix Communautaires",
+      description: "Données partagées par la communauté",
+      gradient: "from-green-500/20 to-emerald-500/20",
+      emoji: "👥"
+    },
+    {
+      src: craftus3,
+      title: "Interface Moderne",
+      description: "Design épuré et fonctionnalités avancées",
+      gradient: "from-orange-500/20 to-red-500/20",
+      emoji: "⚡"
+    }
+  ];
 
-      <div className="relative z-10 max-w-md w-full">
-        {/* Logo et titre */}
+  // Auto-rotation des images
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentImage((prev) => (prev + 1) % images.length);
+    }, 4000);
+    return () => clearInterval(interval);
+  }, [images.length]);
+
+  const nextImage = () => {
+    setCurrentImage((prev) => (prev + 1) % images.length);
+  };
+
+  const prevImage = () => {
+    setCurrentImage((prev) => (prev - 1 + images.length) % images.length);
+  };
+
+  return (
+    <div className={`${colors.bg} text-slate-100 min-h-screen flex items-center justify-center p-4`}>
+      <div className="relative z-10 max-w-6xl w-full">
+        {/* Logo principal */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-r from-emerald-500 to-blue-500 rounded-2xl mb-4 shadow-lg">
-            <img 
-              src="/src/assets/craftus.png" 
-              alt="Craftus" 
-              className="w-10 h-10 rounded-lg"
+          <div className="inline-flex items-center justify-center">
+            <img
+              src={craftusLogo}
+              alt="Craftus"
+              className="h-32 sm:h-40 md:h-48 lg:h-56 xl:h-64 2xl:h-72 w-auto"
               onError={(e) => {
                 e.target.style.display = 'none';
                 e.target.nextSibling.style.display = 'block';
               }}
             />
-            <div className="w-10 h-10 text-white text-xl flex items-center justify-center font-bold" style={{ display: 'none' }}>
+            <div className="h-32 sm:h-40 md:h-48 lg:h-56 xl:h-64 2xl:h-72 text-white text-5xl sm:text-6xl md:text-7xl lg:text-8xl xl:text-9xl 2xl:text-[10rem] flex items-center justify-center font-bold" style={{ display: 'none' }}>
               C
             </div>
           </div>
-          <h1 className="text-3xl font-bold text-white mb-2">Craftus</h1>
-          <p className="text-slate-400 text-lg">Calculateur de profit Dofus</p>
+        </div>
+
+        {/* Carousel hexagonal moderne */}
+        <div className="mb-8">
+          <div className="relative h-96 flex items-center justify-center">
+            {/* Images du carousel */}
+            {images.map((image, index) => {
+              const isCenter = index === currentImage;
+              const isLeft = index === (currentImage - 1 + images.length) % images.length;
+              const isRight = index === (currentImage + 1) % images.length;
+              
+              let position = '';
+              let scale = '';
+              let blur = '';
+              let opacity = '';
+              let zIndex = '';
+              
+              if (isCenter) {
+                position = 'translate-x-0';
+                scale = 'scale-100';
+                blur = 'blur-0';
+                opacity = 'opacity-100';
+                zIndex = 'z-30';
+              } else if (isLeft) {
+                position = '-translate-x-32 md:-translate-x-40';
+                scale = 'scale-75';
+                blur = 'blur-sm';
+                opacity = 'opacity-60';
+                zIndex = 'z-20';
+              } else if (isRight) {
+                position = 'translate-x-32 md:translate-x-40';
+                scale = 'scale-75';
+                blur = 'blur-sm';
+                opacity = 'opacity-60';
+                zIndex = 'z-20';
+              } else {
+                position = 'translate-x-0';
+                scale = 'scale-50';
+                blur = 'blur-md';
+                opacity = 'opacity-30';
+                zIndex = 'z-10';
+              }
+              
+              return (
+                <div
+                  key={index}
+                  className={`absolute transition-all duration-700 ease-in-out ${position} ${scale} ${blur} ${opacity} ${zIndex}`}
+                >
+                  <div className="relative group">
+                    <div className="w-80 h-80 md:w-96 md:h-96 rounded-3xl overflow-hidden bg-slate-800/30 backdrop-blur-sm border border-slate-700/50 shadow-2xl">
+                      <img
+                        src={image.src}
+                        alt={image.title}
+                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                        onError={(e) => {
+                          e.target.style.display = 'none';
+                          e.target.nextSibling.style.display = 'flex';
+                        }}
+                      />
+                      <div className={`w-full h-full bg-gradient-to-br ${image.gradient} flex items-center justify-center text-6xl`} style={{ display: 'none' }}>
+                        {image.emoji}
+                      </div>
+                    </div>
+                    
+                    {/* Overlay avec texte */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent rounded-3xl"></div>
+                    <div className="absolute bottom-6 left-6 right-6">
+                      <h3 className="text-xl font-bold text-white mb-2">{image.title}</h3>
+                      <p className="text-sm text-slate-200">{image.description}</p>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+            
+            {/* Boutons de navigation */}
+            <button
+              onClick={prevImage}
+              className="absolute left-4 top-1/2 -translate-y-1/2 z-40 w-12 h-12 bg-slate-800/80 backdrop-blur-sm rounded-full border border-slate-700/50 flex items-center justify-center hover:bg-slate-700/80 transition-colors"
+            >
+              <svg className="w-6 h-6 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+            </button>
+            
+            <button
+              onClick={nextImage}
+              className="absolute right-4 top-1/2 -translate-y-1/2 z-40 w-12 h-12 bg-slate-800/80 backdrop-blur-sm rounded-full border border-slate-700/50 flex items-center justify-center hover:bg-slate-700/80 transition-colors"
+            >
+              <svg className="w-6 h-6 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </button>
+            
+            {/* Indicateurs de pagination */}
+            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-40 flex space-x-2">
+              {images.map((_, index) => (
+                <button
+                  key={index}
+                  onClick={() => setCurrentImage(index)}
+                  className={`w-3 h-3 rounded-full transition-all duration-300 ${
+                    index === currentImage 
+                      ? 'bg-white scale-125' 
+                      : 'bg-slate-500/50 hover:bg-slate-400/70'
+                  }`}
+                />
+              ))}
+            </div>
+          </div>
         </div>
 
         {/* Card principale */}
-        <div className="bg-slate-800/50 backdrop-blur-sm rounded-2xl p-8 shadow-2xl border border-slate-700/50">
+        <div className="max-w-md mx-auto bg-slate-800/50 backdrop-blur-sm rounded-2xl p-8 shadow-2xl border border-slate-700/50">
           {/* Icône de sécurité */}
           <div className="text-center mb-6">
             <div className="inline-flex items-center justify-center w-12 h-12 bg-blue-500/20 rounded-full mb-4">
@@ -43,7 +189,7 @@ const AuthRequired = ({ onSignIn }) => {
             </div>
             <h2 className="text-xl font-semibold text-white mb-2">Authentification requise</h2>
             <p className="text-slate-400 text-sm leading-relaxed">
-              Connectez-vous avec Google pour accéder à Craftus et sauvegarder vos calculs
+              Connectez-vous avec Google pour accéder pleinement à Craftus
             </p>
           </div>
 
@@ -60,24 +206,6 @@ const AuthRequired = ({ onSignIn }) => {
             </svg>
             <span>Se connecter avec Google</span>
           </button>
-
-          {/* Informations de sécurité */}
-          <div className="mt-6 pt-6 border-t border-slate-700/50">
-            <div className="flex items-start gap-3 text-xs text-slate-500">
-              <svg className="w-4 h-4 text-slate-500 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              <div>
-                <p className="font-medium text-slate-400 mb-1">Pourquoi se connecter ?</p>
-                <ul className="space-y-1 text-slate-500">
-                  <li>• Sauvegarde automatique de vos calculs</li>
-                  <li>• Synchronisation entre appareils</li>
-                  <li>• Accès à vos favoris personnalisés</li>
-                  <li>• Données sécurisées et privées</li>
-                </ul>
-              </div>
-            </div>
-          </div>
         </div>
 
         {/* Footer */}
