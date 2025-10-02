@@ -49,8 +49,9 @@ import {
   PRICE_KIND,
 } from "./lib/communityPrices";
 
-// Logo
+// Logos
 import craftusLogo from "./assets/craftus.png";
+import craftusLogoNew from "./assets/craftus_logo.png";
 
 const TAX_RATE = 0.02;
 
@@ -782,13 +783,20 @@ export default function App() {
   return (
     <div className={`${colors.bg} text-slate-100 min-h-screen p-4 md:p-6`}>
       <div className="max-w-6xl mx-auto">
-        {/* Header avec logo */}
+        {/* Header avec logos */}
         <header className="flex items-center justify-between gap-3 mb-4">
           <div className="flex items-center gap-3">
+            {/* Logo original */}
             <img
               src={craftusLogo}
               alt="Craftus"
-              className="h-10 sm:h-12 md:h-16 lg:h-24 xl:h-60 w-auto select-none"
+              className="h-8 sm:h-10 md:h-12 lg:h-16 xl:h-20 w-auto select-none"
+            />
+            {/* Nouveau logo */}
+            <img
+              src={craftusLogoNew}
+              alt="Craftus Logo"
+              className="h-8 sm:h-10 md:h-12 lg:h-16 xl:h-20 w-auto select-none"
             />
             {sessionIconUrl && (
               <img

@@ -1,12 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { colors } from '../theme/colors';
 import craftusLogo from '../assets/craftus.png';
+import craftusLogoNew from '../assets/craftus_logo.png';
 import craftus1 from '../assets/craftus1.png';
 import craftus2 from '../assets/craftus2.png';
 import craftus3 from '../assets/craftus3.png';
+import CGUModal from './CGUModal';
 
 const AuthRequired = ({ onSignIn }) => {
   const [currentImage, setCurrentImage] = useState(0);
+  const [showCGU, setShowCGU] = useState(false);
   
   const images = [
     {
@@ -51,20 +54,39 @@ const AuthRequired = ({ onSignIn }) => {
   return (
     <div className={`${colors.bg} text-slate-100 min-h-screen flex items-center justify-center p-4`}>
       <div className="relative z-10 max-w-6xl w-full">
-        {/* Logo principal */}
+        {/* Logos principaux */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center">
-            <img
-              src={craftusLogo}
-              alt="Craftus"
-              className="h-32 sm:h-40 md:h-48 lg:h-56 xl:h-64 2xl:h-72 w-auto"
-              onError={(e) => {
-                e.target.style.display = 'none';
-                e.target.nextSibling.style.display = 'block';
-              }}
-            />
-            <div className="h-32 sm:h-40 md:h-48 lg:h-56 xl:h-64 2xl:h-72 text-white text-5xl sm:text-6xl md:text-7xl lg:text-8xl xl:text-9xl 2xl:text-[10rem] flex items-center justify-center font-bold" style={{ display: 'none' }}>
-              C
+          <div className="flex items-center justify-center gap-6">
+            {/* Logo original */}
+            <div className="inline-flex items-center justify-center">
+              <img
+                src={craftusLogo}
+                alt="Craftus"
+                className="h-24 sm:h-32 md:h-40 lg:h-48 xl:h-56 2xl:h-64 w-auto"
+                onError={(e) => {
+                  e.target.style.display = 'none';
+                  e.target.nextSibling.style.display = 'block';
+                }}
+              />
+              <div className="h-24 sm:h-32 md:h-40 lg:h-48 xl:h-56 2xl:h-64 text-white text-4xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl 2xl:text-9xl flex items-center justify-center font-bold" style={{ display: 'none' }}>
+                C
+              </div>
+            </div>
+            
+            {/* Nouveau logo */}
+            <div className="inline-flex items-center justify-center">
+              <img
+                src={craftusLogoNew}
+                alt="Craftus Logo"
+                className="h-24 sm:h-32 md:h-40 lg:h-48 xl:h-56 2xl:h-64 w-auto"
+                onError={(e) => {
+                  e.target.style.display = 'none';
+                  e.target.nextSibling.style.display = 'block';
+                }}
+              />
+              <div className="h-24 sm:h-32 md:h-40 lg:h-48 xl:h-56 2xl:h-64 text-white text-4xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl 2xl:text-9xl flex items-center justify-center font-bold" style={{ display: 'none' }}>
+                C
+              </div>
             </div>
           </div>
         </div>
@@ -210,9 +232,20 @@ const AuthRequired = ({ onSignIn }) => {
 
         {/* Footer */}
         <div className="text-center mt-8 text-xs text-slate-500">
-          <p>En vous connectant, vous acceptez nos conditions d'utilisation</p>
+          <p>
+            En vous connectant, vous acceptez nos{' '}
+            <button
+              onClick={() => setShowCGU(true)}
+              className="text-blue-400 hover:text-blue-300 underline transition-colors"
+            >
+              conditions générales d'utilisation
+            </button>
+          </p>
         </div>
       </div>
+
+      {/* Modal CGU */}
+      <CGUModal isOpen={showCGU} onClose={() => setShowCGU(false)} />
     </div>
   );
 };
