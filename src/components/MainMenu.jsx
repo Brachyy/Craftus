@@ -13,6 +13,7 @@ export default function MainMenu({
   onSave,
   onLoad,
   user,
+  onShowAuthRequired,
   
   // Données
   onRefreshPrices,
@@ -108,9 +109,19 @@ export default function MainMenu({
               </button>
               
               <button
-                onClick={onOpenFavorites}
-                className="px-3 py-1.5 rounded-lg bg-yellow-600 hover:bg-yellow-500 text-white text-sm font-medium transition-all duration-200 shadow-lg hover:shadow-yellow-500/25"
-                title="Gérer mes favoris"
+                onClick={() => {
+                  if (!user) {
+                    onShowAuthRequired();
+                    return;
+                  }
+                  onOpenFavorites();
+                }}
+                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 ${
+                  user 
+                    ? "bg-yellow-600 hover:bg-yellow-500 text-white shadow-lg hover:shadow-yellow-500/25" 
+                    : "bg-yellow-900/40 text-yellow-300/50 hover:bg-yellow-800/60"
+                }`}
+                title={user ? "Gérer mes favoris" : "Connexion requise pour les favoris"}
                 disabled={favoritesLoading}
               >
                 {favoritesLoading ? "⏳..." : `⭐ Favoris (${favoritesCount})`}
@@ -132,27 +143,37 @@ export default function MainMenu({
               </button>
               
               <button
-                onClick={onSave}
-                disabled={!user}
+                onClick={() => {
+                  if (!user) {
+                    onShowAuthRequired();
+                    return;
+                  }
+                  onSave();
+                }}
                 className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 ${
                   user 
                     ? "bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg hover:shadow-emerald-500/25" 
-                    : "bg-emerald-900/40 text-emerald-300/50 cursor-not-allowed"
+                    : "bg-emerald-900/40 text-emerald-300/50 hover:bg-emerald-800/60"
                 }`}
-                title="Enregistrer la session actuelle"
+                title={user ? "Enregistrer la session actuelle" : "Connexion requise pour enregistrer"}
               >
                 💾 Enregistrer
               </button>
               
               <button
-                onClick={onLoad}
-                disabled={!user}
+                onClick={() => {
+                  if (!user) {
+                    onShowAuthRequired();
+                    return;
+                  }
+                  onLoad();
+                }}
                 className={`px-3 py-1.5 rounded-lg text-sm transition-all duration-200 ${
                   user 
                     ? "bg-blue-600 hover:bg-blue-500 text-white border border-blue-500" 
-                    : "bg-blue-900/40 text-blue-300/50 cursor-not-allowed"
+                    : "bg-blue-900/40 text-blue-300/50 hover:bg-blue-800/60"
                 }`}
-                title="Charger une session sauvegardée"
+                title={user ? "Charger une session sauvegardée" : "Connexion requise pour charger"}
               >
                 📂 Charger
               </button>
@@ -165,25 +186,55 @@ export default function MainMenu({
             
             <div className="flex items-center gap-3">
               <button
-                onClick={onShareByLink}
-                className="px-3 py-1.5 rounded-lg bg-purple-600/20 text-purple-300 border border-purple-500/30 hover:bg-purple-600/30 hover:border-purple-500/50 text-sm transition-all duration-200"
-                title="Partager la session via un lien"
+                onClick={() => {
+                  if (!user) {
+                    onShowAuthRequired();
+                    return;
+                  }
+                  onShareByLink();
+                }}
+                className={`px-3 py-1.5 rounded-lg text-sm transition-all duration-200 ${
+                  user 
+                    ? "bg-purple-600/20 text-purple-300 border border-purple-500/30 hover:bg-purple-600/30 hover:border-purple-500/50" 
+                    : "bg-purple-900/40 text-purple-300/50 hover:bg-purple-800/60"
+                }`}
+                title={user ? "Partager la session via un lien" : "Connexion requise pour partager"}
               >
                 🔗 Partager
               </button>
               
               <button
-                onClick={onExportJSON}
-                className="px-3 py-1.5 rounded-lg bg-indigo-600/20 text-indigo-300 border border-indigo-500/30 hover:bg-indigo-600/30 hover:border-indigo-500/50 text-sm transition-all duration-200"
-                title="Exporter la session en JSON"
+                onClick={() => {
+                  if (!user) {
+                    onShowAuthRequired();
+                    return;
+                  }
+                  onExportJSON();
+                }}
+                className={`px-3 py-1.5 rounded-lg text-sm transition-all duration-200 ${
+                  user 
+                    ? "bg-indigo-600/20 text-indigo-300 border border-indigo-500/30 hover:bg-indigo-600/30 hover:border-indigo-500/50" 
+                    : "bg-indigo-900/40 text-indigo-300/50 hover:bg-indigo-800/60"
+                }`}
+                title={user ? "Exporter la session en JSON" : "Connexion requise pour exporter"}
               >
                 📄 Export
               </button>
               
               <button
-                onClick={onImportJSON}
-                className="px-3 py-1.5 rounded-lg bg-indigo-600/20 text-indigo-300 border border-indigo-500/30 hover:bg-indigo-600/30 hover:border-indigo-500/50 text-sm transition-all duration-200"
-                title="Importer une session depuis JSON"
+                onClick={() => {
+                  if (!user) {
+                    onShowAuthRequired();
+                    return;
+                  }
+                  onImportJSON();
+                }}
+                className={`px-3 py-1.5 rounded-lg text-sm transition-all duration-200 ${
+                  user 
+                    ? "bg-indigo-600/20 text-indigo-300 border border-indigo-500/30 hover:bg-indigo-600/30 hover:border-indigo-500/50" 
+                    : "bg-indigo-900/40 text-indigo-300/50 hover:bg-indigo-800/60"
+                }`}
+                title={user ? "Importer une session depuis JSON" : "Connexion requise pour importer"}
               >
                 📥 Import
               </button>
@@ -212,33 +263,56 @@ export default function MainMenu({
           
           {/* Actions principales */}
           <button
-            onClick={onSave}
-            disabled={!user}
+            onClick={() => {
+              if (!user) {
+                onShowAuthRequired();
+                return;
+              }
+              onSave();
+            }}
             className={`px-3 py-2 rounded-lg text-sm font-medium ${
               user 
                 ? "bg-emerald-600 hover:bg-emerald-500 text-white" 
-                : "bg-emerald-900/40 text-emerald-300/50"
+                : "bg-emerald-900/40 text-emerald-300/50 hover:bg-emerald-800/60"
             }`}
+            title={user ? "Enregistrer" : "Connexion requise"}
           >
             💾
           </button>
           
           <button
-            onClick={onLoad}
-            disabled={!user}
+            onClick={() => {
+              if (!user) {
+                onShowAuthRequired();
+                return;
+              }
+              onLoad();
+            }}
             className={`px-3 py-2 rounded-lg text-sm ${
               user 
                 ? "bg-blue-600 hover:bg-blue-500 text-white" 
-                : "bg-blue-900/40 text-blue-300/50"
+                : "bg-blue-900/40 text-blue-300/50 hover:bg-blue-800/60"
             }`}
+            title={user ? "Charger" : "Connexion requise"}
           >
             📂
           </button>
           
           <button
-            onClick={onOpenFavorites}
-            className="px-3 py-2 rounded-lg bg-yellow-600 hover:bg-yellow-500 text-white text-sm"
+            onClick={() => {
+              if (!user) {
+                onShowAuthRequired();
+                return;
+              }
+              onOpenFavorites();
+            }}
+            className={`px-3 py-2 rounded-lg text-sm transition-all duration-200 ${
+              user 
+                ? "bg-yellow-600 hover:bg-yellow-500 text-white" 
+                : "bg-yellow-900/40 text-yellow-300/50 hover:bg-yellow-800/60"
+            }`}
             disabled={favoritesLoading}
+            title={user ? "Favoris" : "Connexion requise"}
           >
             {favoritesLoading ? "⏳" : `⭐ (${favoritesCount})`}
           </button>
@@ -310,20 +384,53 @@ export default function MainMenu({
                 <div className="text-xs text-slate-400 font-medium mb-2">Export/Partage</div>
                 <div className="grid grid-cols-3 gap-2">
                   <button
-                    onClick={onShareByLink}
-                    className="mobile-menu-item px-3 py-2 rounded-lg bg-purple-600/20 text-purple-300 border border-purple-500/30 text-sm menu-button"
+                    onClick={() => {
+                      if (!user) {
+                        onShowAuthRequired();
+                        return;
+                      }
+                      onShareByLink();
+                    }}
+                    className={`mobile-menu-item px-3 py-2 rounded-lg text-sm menu-button ${
+                      user 
+                        ? "bg-purple-600/20 text-purple-300 border border-purple-500/30" 
+                        : "bg-purple-900/40 text-purple-300/50"
+                    }`}
+                    title={user ? "Partager" : "Connexion requise"}
                   >
                     🔗 Partager
                   </button>
                   <button
-                    onClick={onExportJSON}
-                    className="mobile-menu-item px-3 py-2 rounded-lg bg-indigo-600/20 text-indigo-300 border border-indigo-500/30 text-sm menu-button"
+                    onClick={() => {
+                      if (!user) {
+                        onShowAuthRequired();
+                        return;
+                      }
+                      onExportJSON();
+                    }}
+                    className={`mobile-menu-item px-3 py-2 rounded-lg text-sm menu-button ${
+                      user 
+                        ? "bg-indigo-600/20 text-indigo-300 border border-indigo-500/30" 
+                        : "bg-indigo-900/40 text-indigo-300/50"
+                    }`}
+                    title={user ? "Export" : "Connexion requise"}
                   >
                     📄 Export
                   </button>
                   <button
-                    onClick={onImportJSON}
-                    className="mobile-menu-item px-3 py-2 rounded-lg bg-indigo-600/20 text-indigo-300 border border-indigo-500/30 text-sm menu-button"
+                    onClick={() => {
+                      if (!user) {
+                        onShowAuthRequired();
+                        return;
+                      }
+                      onImportJSON();
+                    }}
+                    className={`mobile-menu-item px-3 py-2 rounded-lg text-sm menu-button ${
+                      user 
+                        ? "bg-indigo-600/20 text-indigo-300 border border-indigo-500/30" 
+                        : "bg-indigo-900/40 text-indigo-300/50"
+                    }`}
+                    title={user ? "Import" : "Connexion requise"}
                   >
                     📥 Import
                   </button>

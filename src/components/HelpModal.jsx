@@ -96,7 +96,7 @@ function HelpModal({ isOpen, onClose }) {
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="w-4 h-4 bg-red-500 rounded border border-red-500/50"></div>
-                  <span><strong>Rouge :</strong> Prix très peu fiable (fluctuation > 100%)</span>
+                  <span><strong>Rouge :</strong> Prix très peu fiable (fluctuation &gt; 100%)</span>
                 </div>
                 <p className="text-xs text-slate-400 mt-2">
                   Les couleurs indiquent la fiabilité du prix basée sur la fluctuation par rapport à l'historique récent.

@@ -59,7 +59,17 @@ const provider = new GoogleAuthProvider();
 const db = getFirestore(app);
 
 // helpers simples
-const signInWithGoogle = () => signInWithPopup(auth, provider);
+import { getUserName } from './userNames';
+
+const signInWithGoogle = async () => {
+  try {
+    const result = await signInWithPopup(auth, provider);
+    return result;
+  } catch (error) {
+    console.error("Erreur de connexion Google:", error);
+    throw error;
+  }
+};
 const signOut = () => fbSignOut(auth);
 
 export {

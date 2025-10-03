@@ -48,5 +48,28 @@ service cloud.firestore {
       // Permettre la lecture de tous les documents pour le filtrage côté client
       allow read: if request.auth != null;
     }
+
+    // Noms d'utilisateur (règles temporaires pour développement)
+    match /userNames/{uid} {
+      allow read, write: if true; // Temporaire pour le développement
+    }
+
+    // Index des noms d'utilisateur (règles temporaires pour développement)
+    match /usernameIndex/{username} {
+      allow read, write: if true; // Temporaire pour le développement
+    }
+
+    // Profils utilisateurs (pour les photos de profil dans le leaderboard)
+    match /userProfiles/{uid} {
+      allow read: if true; // Lecture publique pour le leaderboard
+      allow write: if request.auth != null && request.auth.uid == uid
+        && request.resource.data.keys().hasAll(['uid', 'email', 'displayName', 'photoURL', 'lastSeen', 'createdAt'])
+        && request.resource.data.uid is string
+        && request.resource.data.email is string
+        && (request.resource.data.displayName == null || request.resource.data.displayName is string)
+        && (request.resource.data.photoURL == null || request.resource.data.photoURL is string)
+        && request.resource.data.lastSeen is timestamp
+        && request.resource.data.createdAt is timestamp;
+    }
   }
 }
