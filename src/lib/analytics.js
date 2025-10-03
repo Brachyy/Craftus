@@ -171,7 +171,7 @@ export const analytics = {
 // Fonction pour initialiser les paramètres utilisateur
 export const setUserProperties = (userId, userName, userRank, serverId) => {
   if (typeof gtag !== 'undefined') {
-    const gaId = import.meta.env.VITE_GA_MEASUREMENT_ID || 'G-12143560546';
+    const gaId = import.meta.env.VITE_GA_MEASUREMENT_ID || 'G-JFFJ466DW5';
     gtag('config', gaId, {
       user_id: userId,
       custom_map: {
