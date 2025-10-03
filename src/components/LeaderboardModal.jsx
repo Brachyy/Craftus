@@ -5,37 +5,76 @@ import { db } from '../lib/firebase';
 import { auth } from '../lib/firebase';
 import { getUserNames } from '../lib/userNames';
 import { getUserProfiles } from '../lib/userProfiles';
+import { getUserRank, RANKS } from '../lib/ranks';
+import { getUserRankData } from '../lib/userRanks';
 
-// Composant Avatar avec avatars colorés
-const UserAvatar = ({ userId, userName, className = "w-6 h-6" }) => {
-  // Générer une couleur basée sur l'UID pour avoir des avatars uniques
-  const getAvatarColor = (uid) => {
-    const colors = [
-      'bg-red-500', 'bg-blue-500', 'bg-green-500', 'bg-yellow-500',
-      'bg-purple-500', 'bg-pink-500', 'bg-indigo-500', 'bg-teal-500',
-      'bg-orange-500', 'bg-cyan-500', 'bg-lime-500', 'bg-amber-500'
-    ];
-    
-    // Utiliser l'UID pour choisir une couleur de manière déterministe
-    const hash = uid.split('').reduce((a, b) => {
-      a = ((a << 5) - a) + b.charCodeAt(0);
-      return a & a;
-    }, 0);
-    
-    return colors[Math.abs(hash) % colors.length];
-  };
+// Composant Logo de Rank
+const RankLogo = ({ userId, participations, className = "w-8 h-8" }) => {
+  const [userRank, setUserRank] = useState(null);
   
-  // Obtenir les initiales du nom d'utilisateur ou de l'UID
-  const getInitials = () => {
-    if (userName && userName.length >= 2) {
-      return userName.slice(0, 2).toUpperCase();
+  useEffect(() => {
+    const loadRank = async () => {
+      try {
+        const rankData = await getUserRankData(userId);
+        if (rankData) {
+          // Utiliser le rank stocké en base directement
+          const rank = RANKS.find(r => r.id === rankData.currentRank) || getUserRank(rankData.monthlyParticipations);
+          setUserRank(rank);
+        } else {
+          // Fallback sur les participations si pas de rank en base
+          const rank = getUserRank(participations);
+          setUserRank(rank);
+        }
+      } catch (error) {
+        // Fallback sur les participations en cas d'erreur
+        const rank = getUserRank(participations);
+        setUserRank(rank);
+      }
+    };
+    
+    if (userId) {
+      loadRank();
     }
-    return userId.slice(0, 2).toUpperCase();
+  }, [userId, participations]);
+
+  const getRankAssetPath = (rankId) => {
+    const rankAssets = {
+      boufton: '/src/assets/ranks/boufton.png',
+      aventurier: '/src/assets/ranks/aventurier_amakna.png',
+      disciple: '/src/assets/ranks/apprenti_otomai.png',
+      chasseur: '/src/assets/ranks/chasseur_dofus.png',
+      protecteur: '/src/assets/ranks/protecteur_almanax.png',
+      champion: '/src/assets/ranks/champion_kolizeum.png',
+      heros: '/src/assets/ranks/hero_bonta⁄brakmar.png',
+      gardien: '/src/assets/ranks/gardien_krosmoz.png',
+    };
+    return rankAssets[rankId] || '/src/assets/ranks/boufton.png';
   };
+
+  if (!userRank) {
+    return (
+      <div className={`${className} flex items-center justify-center`}>
+        <div className="w-full h-full flex items-center justify-center text-lg">
+          🐑
+        </div>
+      </div>
+    );
+  }
   
   return (
-    <div className={`${className} rounded-full flex items-center justify-center text-xs font-bold text-white border border-slate-600 ${getAvatarColor(userId)}`}>
-      {getInitials()}
+    <div className={`${className} flex items-center justify-center`}>
+      <img 
+        src={getRankAssetPath(userRank.id)} 
+        alt={userRank.name}
+        className="w-full h-full object-contain"
+        onError={(e) => {
+          e.target.style.display = 'none';
+          e.target.nextSibling.style.display = 'flex';
+        }}
+      />
+      <div className="w-full h-full flex items-center justify-center text-lg" style={{ display: 'none' }}>
+        {userRank.emoji}
+      </div>
     </div>
   );
 };
@@ -296,16 +335,17 @@ export default function LeaderboardModal({ isOpen, onClose }) {
                 <div
                   key={user.userId}
                   className={`flex items-center gap-3 p-3 rounded-lg transition-all duration-200 ${
-                    index < 3
-                      ? 'bg-gradient-to-r from-yellow-900/20 to-orange-900/20 border border-yellow-500/30'
-                      : 'bg-slate-700/50 hover:bg-slate-700'
+                    index === 0 ? 'bg-gradient-to-r from-yellow-900/30 to-amber-900/30 border border-yellow-500/50 shadow-lg shadow-yellow-500/20' :
+                    index === 1 ? 'bg-gradient-to-r from-gray-800/30 to-slate-800/30 border border-gray-400/50 shadow-lg shadow-gray-400/20' :
+                    index === 2 ? 'bg-gradient-to-r from-orange-900/30 to-amber-900/30 border border-orange-500/50 shadow-lg shadow-orange-500/20' :
+                    'bg-slate-700/50 hover:bg-slate-700'
                   }`}
                 >
                   <div className="flex-shrink-0">
                     <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
-                      index === 0 ? 'bg-yellow-500 text-black' :
-                      index === 1 ? 'bg-gray-400 text-black' :
-                      index === 2 ? 'bg-orange-600 text-white' :
+                      index === 0 ? 'bg-gradient-to-br from-yellow-400 to-yellow-600 text-black shadow-lg shadow-yellow-500/50' :
+                      index === 1 ? 'bg-gradient-to-br from-gray-300 to-gray-500 text-black shadow-lg shadow-gray-400/50' :
+                      index === 2 ? 'bg-gradient-to-br from-orange-400 to-orange-600 text-white shadow-lg shadow-orange-500/50' :
                       'bg-slate-600 text-white'
                     }`}>
                       {getRankIcon(index + 1)}
@@ -314,10 +354,10 @@ export default function LeaderboardModal({ isOpen, onClose }) {
                   
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
-                      {/* Avatar coloré avec initiales du nom d'utilisateur */}
-                      <UserAvatar 
+                      {/* Logo de rank */}
+                      <RankLogo 
                         userId={user.userId}
-                        userName={userNames[user.userId]}
+                        participations={user.contributions}
                         className="w-6 h-6"
                       />
                       <span className="text-white font-medium truncate">
@@ -331,9 +371,9 @@ export default function LeaderboardModal({ isOpen, onClose }) {
                   
                   <div className="flex-shrink-0">
                     <div className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                      index === 0 ? 'bg-yellow-500/20 text-yellow-400' :
-                      index === 1 ? 'bg-gray-500/20 text-gray-400' :
-                      index === 2 ? 'bg-orange-500/20 text-orange-400' :
+                      index === 0 ? 'bg-gradient-to-r from-yellow-500/30 to-amber-500/30 text-yellow-300 border border-yellow-500/50' :
+                      index === 1 ? 'bg-gradient-to-r from-gray-500/30 to-slate-500/30 text-gray-300 border border-gray-400/50' :
+                      index === 2 ? 'bg-gradient-to-r from-orange-500/30 to-amber-500/30 text-orange-300 border border-orange-500/50' :
                       'bg-slate-600/20 text-slate-400'
                     }`}>
                       {user.contributions}

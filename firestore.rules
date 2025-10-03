@@ -71,5 +71,30 @@ service cloud.firestore {
         && request.resource.data.lastSeen is timestamp
         && request.resource.data.createdAt is timestamp;
     }
+
+    // Collection des rangs utilisateurs
+    match /userRanks/{userId} {
+      allow read: if true; // Lecture publique pour le leaderboard
+      allow write: if request.auth != null && request.auth.uid == userId;
+      allow create: if request.auth != null && 
+                       request.auth.uid == userId &&
+                       request.resource.data.userId == userId &&
+                       request.resource.data.userName is string &&
+                       request.resource.data.currentRank is string &&
+                       request.resource.data.monthlyParticipations is number &&
+                       request.resource.data.totalParticipations is number &&
+                       request.resource.data.lastResetDate is timestamp &&
+                       request.resource.data.lastUpdated is timestamp &&
+                       request.resource.data.createdAt is timestamp;
+      allow update: if request.auth != null && 
+                       request.auth.uid == userId &&
+                       request.resource.data.userId == userId &&
+                       request.resource.data.userName is string &&
+                       request.resource.data.currentRank is string &&
+                       request.resource.data.monthlyParticipations is number &&
+                       request.resource.data.totalParticipations is number &&
+                       request.resource.data.lastResetDate is timestamp &&
+                       request.resource.data.lastUpdated is timestamp;
+    }
   }
 }

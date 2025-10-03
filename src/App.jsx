@@ -6,6 +6,9 @@ import ItemCard from "./components/ItemCard";
 import ComparisonTable from "./components/ComparisonTable";
 import ShoppingList from "./components/ShoppingList";
 
+// Analytics
+import { analytics, initAnalytics, setUserProperties } from "./lib/analytics";
+
 import { itemAnkamaId, itemImage, itemLevel, itemName } from "./lib/utils";
 import {
   apiGET,
@@ -31,8 +34,13 @@ import AuthLoading from "./components/AuthLoading";
 import FloatingNav from "./components/FloatingNav";
 import CommunityCallToAction from "./components/CommunityCallToAction";
 import CommunityReward from "./components/CommunityReward";
+import UserRankDisplay from "./components/UserRankDisplay";
+import { updateUserRank } from "./lib/userRanks";
 import UsernameModal from "./components/UsernameModal";
 import Footer from "./components/Footer";
+import SharePromotion from "./components/SharePromotion";
+import SiteAlert from "./components/SiteAlert";
+import AnalyticsTest from "./components/AnalyticsTest";
 
 // Favoris Firebase
 import { 
@@ -146,6 +154,7 @@ export default function App() {
   const [showAuthRequired, setShowAuthRequired] = useState(false);
   const [userName, setUserNameState] = useState(null);
   const [showUsernameModal, setShowUsernameModal] = useState(false);
+  const [rankUpdateTrigger, setRankUpdateTrigger] = useState(0);
 
   // Filtres visibles
   const [equipmentOnly, setEquipmentOnly] = useState(false);
@@ -154,7 +163,11 @@ export default function App() {
   const [jobId, setJobId] = useState("");
 
   // Multi-serveur (segmentation des prix)
-  const [serverId, setServerId] = useState("Brial");
+  const [serverId, setServerId] = useState(() => {
+    // Restaurer le serveur sauvegardé ou utiliser "Brial" par défaut
+    const savedServer = localStorage.getItem('craftus_selected_server');
+    return savedServer || "Brial";
+  });
 
   // Comparaison de prix
   const [selectedForComparison, setSelectedForComparison] = useState(new Set());
@@ -183,6 +196,11 @@ export default function App() {
   // Tri comparatif
   const [sort, setSort] = useState({ key: "gain", dir: "desc" });
 
+  // Sauvegarder le serveur sélectionné
+  useEffect(() => {
+    localStorage.setItem('craftus_selected_server', serverId);
+  }, [serverId]);
+
   // Auth
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (u) => {
@@ -195,15 +213,21 @@ export default function App() {
           const existingUserName = await getUserName(u.uid);
           if (existingUserName) {
             setUserNameState(existingUserName);
+            // Analytics : Utilisateur connecté
+            setUserProperties(u.uid, existingUserName, 'unknown', serverId);
+            analytics.userSignIn('google');
           }
         } catch (error) {
           console.error("Erreur lors du chargement du nom d'utilisateur:", error);
+          analytics.errorOccurred('username_load', error.message);
         }
       } else {
         // Utilisateur déconnecté, nettoyer les favoris et le nom
         setFavorites(new Set());
         setUserNameState(null);
         setFavoriteItems([]);
+        // Analytics : Utilisateur déconnecté
+        analytics.userSignOut();
       }
     });
     return () => unsub();
@@ -214,14 +238,20 @@ export default function App() {
   const [openLoad, setOpenLoad] = useState(false);
   const [openHelp, setOpenHelp] = useState(false);
   
-  // Ouvrir automatiquement le helper pour les nouveaux utilisateurs
+  // Alerte intégrée
+  const [showAlert, setShowAlert] = useState(false);
+  const [alertData, setAlertData] = useState({ title: '', message: '', type: 'info' });
+  
+  // Ouvrir automatiquement le helper pour les utilisateurs non connectés (à chaque actualisation)
   useEffect(() => {
-    const hasSeenHelper = localStorage.getItem('craftus_helper_seen');
-    if (!hasSeenHelper && user) {
+    // Attendre que l'authentification soit terminée
+    if (authLoading) return;
+    
+    // Afficher le helper à chaque fois pour les utilisateurs non connectés
+    if (!user) {
       setOpenHelp(true);
-      localStorage.setItem('craftus_helper_seen', 'true');
     }
-  }, [user]);
+  }, [user, authLoading]);
   const [currentSessionId, setCurrentSessionId] = useState(null);
 
   // Icône de la session courante
@@ -241,6 +271,11 @@ export default function App() {
 
   // Pré-remplissage différé (après restauration / ouverture lien)
   const [pendingPrefill, setPendingPrefill] = useState(false);
+
+  // Initialiser Analytics
+  useEffect(() => {
+    initAnalytics();
+  }, []);
 
   // Charger types + classes
   useEffect(() => {
@@ -446,21 +481,53 @@ export default function App() {
     setQuery("");
     setSuggestions([]);
     addToSearchHistory(raw.displayName || raw.name?.fr || "");
+    
+    // Analytics : Item ajouté
+    analytics.itemAdded(raw.displayName || raw.name?.fr || "", serverId);
   }
 
   // Fonction pour forcer le rechargement des données communautaires
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const triggerRefresh = () => setRefreshTrigger(prev => prev + 1);
 
-  // Rafraîchir tous les prix depuis la BDD communautaire (DESTRUCTIF après confirmation)
-  async function refreshCommunityPricesForAll() {
-    if (!items.length) return;
-    const ok = window.confirm(
-      "Cette action va écraser vos prix saisis localement avec les derniers prix communautaires. Continuer ?"
-    );
-    if (!ok) return;
+  // Fonction pour changer de serveur avec confirmation
+  const handleServerChange = (newServerId) => {
+    if (newServerId === serverId) return; // Pas de changement
     
+    const previousServerId = serverId;
     
+    setAlertData({
+      title: 'Changer de serveur',
+      message: `Changer de serveur va actualiser tous les prix avec ceux du serveur ${newServerId}. Vos prix locaux seront écrasés. Continuer ?`,
+      type: 'warning',
+      onConfirm: async () => {
+        setServerId(newServerId);
+        setShowAlert(false);
+        
+        // Analytics : Serveur changé
+        analytics.serverChanged(previousServerId, newServerId);
+        
+        // Actualiser directement les prix après confirmation
+        if (items.length > 0) {
+          await executeRefresh();
+        }
+      },
+      onCancel: () => {
+        // Revenir au serveur précédent
+        setShowAlert(false);
+      }
+    });
+    setShowAlert(true);
+  };
+
+  // Fonction pour confirmer l'actualisation des prix
+  const handleConfirmRefresh = () => {
+    setShowAlert(false);
+    // Exécuter l'actualisation des prix
+    executeRefresh();
+  };
+
+  const executeRefresh = async () => {
     try {
       const refreshed = await Promise.all(
         items.map(async (it) => {
@@ -468,18 +535,28 @@ export default function App() {
 
           try {
             const d = await getCommunityPrice(PRICE_KIND.SELL, copy.ankamaId, serverId);
-            if (d?.lastPrice != null) copy.sellPrice = Number(d.lastPrice);
+            if (d?.lastPrice != null) {
+              copy.sellPrice = Number(d.lastPrice);
+            } else {
+              copy.sellPrice = null; // Vider le prix s'il n'existe pas sur ce serveur
+            }
           } catch (e) {
             console.warn("[refresh] sell", { itemId: copy.ankamaId, e });
+            copy.sellPrice = null; // Vider le prix en cas d'erreur
           }
 
           for (let i = 0; i < copy.ingredients.length; i++) {
             const ing = copy.ingredients[i];
             try {
               const d = await getCommunityPrice(PRICE_KIND.ING, ing.ankamaId, serverId);
-              if (d?.lastPrice != null) ing.unitPrice = Number(d.lastPrice);
+              if (d?.lastPrice != null) {
+                ing.unitPrice = Number(d.lastPrice);
+              } else {
+                ing.unitPrice = null; // Vider le prix s'il n'existe pas sur ce serveur
+              }
             } catch (e) {
               console.warn("[refresh] ing", { ingId: ing.ankamaId, e });
+              ing.unitPrice = null; // Vider le prix en cas d'erreur
             }
           }
           return copy;
@@ -495,10 +572,23 @@ export default function App() {
     } catch (e) {
       console.error("[refreshCommunityPricesForAll] failed", e);
     }
+  };
+
+  // Rafraîchir tous les prix depuis la BDD communautaire (DESTRUCTIF après confirmation)
+  async function refreshCommunityPricesForAll() {
+    if (!items.length) return;
+    
+    // Utiliser notre alerte intégrée au lieu de window.confirm
+    setAlertData({
+      title: 'Actualiser les prix communautaires',
+      message: 'Cette action va écraser vos prix saisis localement avec les derniers prix communautaires. Continuer ?',
+      type: 'warning'
+    });
+    setShowAlert(true);
   }
 
   // Mises à jour inputs
-  const updateIngredientPrice = (itemKey, ingId, price) => {
+  const updateIngredientPrice = async (itemKey, ingId, price) => {
     const val = price === "" || price == null ? undefined : Number(price);
     setItems((prev) =>
       prev.map((it) =>
@@ -512,15 +602,37 @@ export default function App() {
             }
       )
     );
+
+    // Incrémenter les participations si l'utilisateur est connecté et renseigne un prix valide
+    if (user && userName && val && val > 0) {
+      try {
+        await updateUserRank(user.uid, userName, 1);
+        // Déclencher le rechargement du rank dans CommunityReward
+        setRankUpdateTrigger(prev => prev + 1);
+      } catch (error) {
+        console.error('Erreur lors de la mise à jour du rang:', error);
+      }
+    }
   };
-  const updateSellPrice = (itemKey, price) =>
+  const updateSellPrice = async (itemKey, price) => {
+    const val = price === "" || price == null ? undefined : Number(price);
     setItems((prev) =>
       prev.map((it) =>
-        it.key !== itemKey
-          ? it
-          : { ...it, sellPrice: price === "" || price == null ? undefined : Number(price) }
+        it.key !== itemKey ? it : { ...it, sellPrice: val }
       )
     );
+
+    // Incrémenter les participations si l'utilisateur est connecté et renseigne un prix valide
+    if (user && userName && val && val > 0) {
+      try {
+        await updateUserRank(user.uid, userName, 1);
+        // Déclencher le rechargement du rank dans CommunityReward
+        setRankUpdateTrigger(prev => prev + 1);
+      } catch (error) {
+        console.error('Erreur lors de la mise à jour du rang:', error);
+      }
+    }
+  };
   const updateCraftCount = (itemKey, count) =>
     setItems((prev) =>
       prev.map((it) =>
@@ -530,7 +642,15 @@ export default function App() {
       )
     );
 
-  const removeItem = (itemKey) => setItems((prev) => prev.filter((it) => it.key !== itemKey));
+  const removeItem = (itemKey) => {
+    const item = items.find(it => it.key === itemKey);
+    setItems((prev) => prev.filter((it) => it.key !== itemKey));
+    
+    // Analytics : Item supprimé
+    if (item) {
+      analytics.itemRemoved(item.displayName || `Item ${item.ankamaId}`);
+    }
+  };
   const clearAll = () => {
     setItems([]);
     setCurrentSessionId(null);
@@ -787,9 +907,13 @@ export default function App() {
       const url = `${location.origin}${location.pathname}?data=${b64url}`;
       await navigator.clipboard.writeText(url);
       alert("Lien copié dans le presse-papiers !");
+      
+      // Analytics : Lien partagé
+      analytics.linkShared('clipboard');
     } catch (e) {
       alert("Impossible de copier le lien. Voir console.");
       console.error(e);
+      analytics.errorOccurred('share_link', e.message);
     }
   }
   function exportJSON() {
@@ -806,6 +930,9 @@ export default function App() {
     a.download = `craftus-session-${Date.now()}.json`;
     a.click();
     URL.revokeObjectURL(a.href);
+    
+    // Analytics : JSON exporté
+    analytics.jsonExported();
   }
   function importJSON() {
     // Vérifier si l'utilisateur est connecté
@@ -820,8 +947,12 @@ export default function App() {
       const snap = JSON.parse(txt);
       restoreFromSnapshot(snap);
       alert("Session chargée !");
+      
+      // Analytics : JSON importé
+      analytics.jsonImported();
     } catch {
       alert("JSON invalide.");
+      analytics.errorOccurred('json_import', 'Invalid JSON format');
     }
   }
 
@@ -896,7 +1027,10 @@ export default function App() {
           </div>
           <div className="flex items-center gap-2">
             <button
-              onClick={() => setOpenHelp(true)}
+              onClick={() => {
+                setOpenHelp(true);
+                analytics.helpOpened();
+              }}
               className="p-2 text-slate-400 hover:text-slate-200 hover:bg-slate-700/50 rounded-lg transition-colors"
               title="Aide et guide d'utilisation"
             >
@@ -943,9 +1077,9 @@ export default function App() {
         <MainMenu
           // Configuration
           serverId={serverId}
-          setServerId={setServerId}
+          setServerId={handleServerChange}
           showDebug={showDebug}
-          setShowDebug={setShowDebug}
+          setShowDebug={showDebug}
           
           // Actions principales
           onClearAll={clearAll}
@@ -976,7 +1110,7 @@ export default function App() {
 
         {/* Récompense communautaire pour les utilisateurs connectés qui ont contribué */}
         {user && (
-          <CommunityReward user={user} userName={userName} />
+          <CommunityReward user={user} userName={userName} rankUpdateTrigger={rankUpdateTrigger} />
         )}
 
         {/* Filtres (on enlève le checkbox “craftables”) */}
@@ -1202,11 +1336,30 @@ export default function App() {
       {/* Modal d'aide */}
       <HelpModal
         isOpen={openHelp}
-        onClose={() => setOpenHelp(false)}
+        onClose={() => {
+          setOpenHelp(false);
+          analytics.helpClosed();
+        }}
       />
       
       {/* Footer */}
       <Footer />
+      
+      {/* Messages de promotion et rappels */}
+      <SharePromotion user={user} selectedServer={serverId} isHelperOpen={openHelp} />
+      
+      {/* Alerte intégrée */}
+      <SiteAlert
+        isOpen={showAlert}
+        onClose={() => setShowAlert(false)}
+        onConfirm={alertData.onConfirm || handleConfirmRefresh}
+        title={alertData.title}
+        message={alertData.message}
+        type={alertData.type}
+      />
+      
+      {/* Composant de test Analytics (développement seulement) */}
+      {process.env.NODE_ENV === 'development' && <AnalyticsTest />}
     </div>
   );
 }

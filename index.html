@@ -7,6 +7,22 @@
 <title>Craftus</title>
 
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    
+    <!-- Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-12143560546"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'G-12143560546', {
+        page_title: 'Craftus - Calculateur de rentabilité Dofus',
+        page_location: window.location.href,
+        custom_map: {
+          'custom_parameter_1': 'server_id',
+          'custom_parameter_2': 'user_rank'
+        }
+      });
+    </script>
   </head>
   <body>
     <div id="root"></div>

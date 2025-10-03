@@ -218,8 +218,8 @@ export default function ShoppingList({
           </thead>
           <tbody>
             {rows.map((r) => {
-              const unitRounded = Number.isFinite(Number(r.unitPrice)) ? Math.max(0, Math.round(Number(r.unitPrice))) : undefined;
-              const derivedTotal = Number.isFinite(unitRounded) ? unitRounded * (r.qty || 0) : undefined;
+              const unitRounded = Number.isFinite(Number(r.unitPrice)) ? Math.round(Number(r.unitPrice)) : undefined;
+              const derivedTotal = Number.isFinite(unitRounded) && unitRounded > 0 ? unitRounded * (r.qty || 0) : undefined;
               const totalValue =
                 Object.prototype.hasOwnProperty.call(totalDrafts, r.id)
                   ? totalDrafts[r.id]
@@ -316,7 +316,7 @@ export default function ShoppingList({
                       type="text"
                       inputMode="numeric"
                       className={`${inputClasses} w-36 text-right`}
-                      value={Number.isFinite(unitRounded) ? unitRounded : ""}
+                      value={Number.isFinite(unitRounded) && unitRounded > 0 ? unitRounded : ""}
                       onFocus={(e) => {
                         handleFocus(e);
                         // Sauvegarder la valeur actuelle au focus
@@ -352,7 +352,7 @@ export default function ShoppingList({
                         type="text"
                         inputMode="numeric"
                         className={`${inputClasses} w-40`}
-                        value={totalValue}
+                        value={totalValue === 0 ? "" : totalValue}
                         onFocus={(e) => {
                           if (!Object.prototype.hasOwnProperty.call(totalDrafts, r.id)) {
                             startTotalEdit(r.id, derivedTotal);

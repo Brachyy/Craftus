@@ -6,7 +6,6 @@ export default function MainMenu({
   serverId,
   setServerId,
   showDebug,
-  setShowDebug,
   
   // Actions principales
   onClearAll,
@@ -42,45 +41,29 @@ export default function MainMenu({
       {/* Menu Desktop */}
       <div className="hidden md:block">
         <div className="grid grid-cols-2 gap-4 mb-3">
-          {/* Configuration */}
-          <div className="menu-group flex items-center justify-between bg-slate-800/50 rounded-xl px-4 py-2 border border-slate-700">
-            <span className="text-sm text-slate-300 font-bold">Configuration</span>
-            
+          {/* Serveur - Section dédiée */}
+          <div className="menu-group flex items-center justify-center bg-gradient-to-r from-emerald-900/50 to-blue-900/50 rounded-xl px-4 py-4 border-2 border-emerald-500/50 h-20">
             <div className="flex items-center gap-3">
-              {/* Serveur */}
-              <div className="flex items-center gap-2">
-                <label className="text-slate-300 text-sm">🌐</label>
-                <select
-                  value={serverId}
-                  onChange={(e) => setServerId(e.target.value)}
-                  className={`px-3 py-1.5 rounded-lg bg-[#20242a] text-slate-200 border ${colors.border} text-sm focus:ring-2 focus:ring-emerald-500`}
-                  title="Choisissez votre serveur (les prix sont segmentés)"
-                >
-                  {servers.map(server => (
-                    <option key={server} value={server}>{server}</option>
-                  ))}
-                </select>
-              </div>
-              
-              {/* Debug */}
-              <button
-                onClick={() => setShowDebug((v) => !v)}
-                className={`px-3 py-1.5 rounded-lg text-sm transition-all duration-200 ${
-                  showDebug 
-                    ? "bg-emerald-600 text-white" 
-                    : "bg-[#20242a] text-slate-300 border border-slate-600 hover:border-emerald-500"
-                }`}
-                title="Afficher/masquer les informations de debug"
+              <span className="text-emerald-400 text-lg">🌐</span>
+              <span className="text-emerald-300 text-sm font-medium">Serveur :</span>
+              <select
+                value={serverId}
+                onChange={(e) => setServerId(e.target.value)}
+                className={`px-4 py-2 rounded-lg bg-gradient-to-r from-emerald-800/50 to-blue-800/50 text-white border-2 border-emerald-500/50 text-sm font-medium focus:ring-2 focus:ring-emerald-400 focus:border-emerald-400 transition-all duration-200 hover:border-emerald-400`}
+                title="⚠️ IMPORTANT : Choisissez votre serveur ! Les prix varient énormément entre serveurs"
               >
-                🔧 Debug
-              </button>
+                {servers.map(server => (
+                  <option key={server} value={server} className="bg-slate-800 text-white">{server}</option>
+                ))}
+              </select>
+              <div className="text-xs text-emerald-300/70 max-w-32">
+                Les prix varient énormément !
+              </div>
             </div>
           </div>
 
           {/* Données */}
-          <div className="menu-group flex items-center justify-between bg-slate-800/50 rounded-xl px-4 py-2 border border-slate-700">
-            <span className="text-sm text-slate-300 font-bold">Données</span>
-            
+          <div className="menu-group flex items-center justify-center bg-slate-800/50 rounded-xl px-4 py-4 border border-slate-700 h-20">
             <div className="flex items-center gap-3">
               <button
                 onClick={onRefreshPrices}
@@ -130,9 +113,7 @@ export default function MainMenu({
           </div>
 
           {/* Actions principales */}
-          <div className="menu-group flex items-center justify-between bg-slate-800/50 rounded-xl px-4 py-2 border border-slate-700">
-            <span className="text-sm text-slate-300 font-bold">Actions</span>
-            
+          <div className="menu-group flex items-center justify-center bg-slate-800/50 rounded-xl px-4 py-4 border border-slate-700 h-20">
             <div className="flex items-center gap-3">
               <button
                 onClick={onClearAll}
@@ -181,9 +162,7 @@ export default function MainMenu({
           </div>
 
           {/* Export/Partage */}
-          <div className="menu-group flex items-center justify-between bg-slate-800/50 rounded-xl px-4 py-2 border border-slate-700">
-            <span className="text-sm text-slate-300 font-bold">Export</span>
-            
+          <div className="menu-group flex items-center justify-center bg-slate-800/50 rounded-xl px-4 py-4 border border-slate-700 h-20">
             <div className="flex items-center gap-3">
               <button
                 onClick={() => {
@@ -247,16 +226,18 @@ export default function MainMenu({
       <div className="md:hidden">
         {/* Boutons principaux toujours visibles */}
         <div className="flex items-center gap-2 mb-3">
-          {/* Serveur */}
-          <div className="flex items-center gap-2">
-            <label className="text-slate-300 text-sm">🌐</label>
+          {/* Serveur - Version mobile améliorée */}
+          <div className="flex items-center gap-2 bg-gradient-to-r from-emerald-900/30 to-blue-900/30 p-2 rounded-lg border border-emerald-500/30">
+            <span className="text-emerald-400 text-sm">🌐</span>
+            <span className="text-emerald-300 text-xs font-medium">Serveur:</span>
             <select
               value={serverId}
               onChange={(e) => setServerId(e.target.value)}
-              className={`px-3 py-2 rounded-lg bg-[#20242a] text-slate-200 border ${colors.border} text-sm`}
+              className={`px-3 py-1 rounded-lg bg-gradient-to-r from-emerald-800/50 to-blue-800/50 text-white border border-emerald-500/50 text-xs font-medium`}
+              title="⚠️ IMPORTANT : Choisissez votre serveur !"
             >
               {servers.map(server => (
-                <option key={server} value={server}>{server}</option>
+                <option key={server} value={server} className="bg-slate-800 text-white">{server}</option>
               ))}
             </select>
           </div>
@@ -339,16 +320,6 @@ export default function MainMenu({
                   className="mobile-menu-item w-full px-3 py-2 rounded-lg bg-red-600/20 text-red-300 border border-red-500/30 text-sm menu-button"
                 >
                   🗑️ Vider
-                </button>
-                <button
-                  onClick={() => setShowDebug(!showDebug)}
-                  className={`mobile-menu-item w-full px-3 py-2 rounded-lg text-sm menu-button ${
-                    showDebug 
-                      ? "bg-emerald-600 text-white" 
-                      : "bg-slate-600 text-slate-300"
-                  }`}
-                >
-                  🔧 Debug
                 </button>
               </div>
 
