@@ -74,8 +74,8 @@ export default function MainMenu({
                 disabled={!itemsCount}
                 className={`px-3 py-1.5 rounded-lg text-sm transition-all duration-200 ${
                   itemsCount 
-                    ? "bg-slate-600 hover:bg-slate-500 text-white border border-slate-500" 
-                    : "bg-slate-800/50 text-slate-500 cursor-not-allowed"
+                    ? "bg-gray-700 hover:bg-gray-600 text-white border border-gray-600" 
+                    : "bg-gray-800/50 text-gray-500 cursor-not-allowed"
                 }`}
                 title="Écrase vos prix locaux avec les derniers prix communautaires"
               >
@@ -87,8 +87,8 @@ export default function MainMenu({
                 disabled={selectedForComparison.size < 2}
                 className={`px-3 py-1.5 rounded-lg text-sm transition-all duration-200 ${
                   selectedForComparison.size >= 2 
-                    ? "bg-blue-600 hover:bg-blue-500 text-white shadow-lg hover:shadow-blue-500/25" 
-                    : "bg-blue-900/40 text-blue-300/50 cursor-not-allowed"
+                    ? "bg-gray-700 hover:bg-gray-600 text-white shadow-lg hover:shadow-gray-500/25" 
+                    : "bg-gray-800/40 text-gray-400/50 cursor-not-allowed"
                 }`}
                 title={selectedForComparison.size >= 2 ? "Comparer les items sélectionnés" : "Sélectionnez au moins 2 items"}
               >
@@ -123,8 +123,8 @@ export default function MainMenu({
                 }}
                 className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 ${
                   user 
-                    ? "bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg hover:shadow-emerald-500/25" 
-                    : "bg-emerald-900/40 text-emerald-300/50 hover:bg-emerald-800/60"
+                    ? "bg-gray-700 hover:bg-gray-600 text-white shadow-lg hover:shadow-gray-500/25" 
+                    : "bg-gray-800/40 text-gray-400/50 hover:bg-gray-700/60"
                 }`}
                 title={user ? "Enregistrer la session actuelle" : "Connexion requise pour enregistrer"}
               >
@@ -141,8 +141,8 @@ export default function MainMenu({
                 }}
                 className={`px-3 py-1.5 rounded-lg text-sm transition-all duration-200 ${
                   user 
-                    ? "bg-blue-600 hover:bg-blue-500 text-white border border-blue-500" 
-                    : "bg-blue-900/40 text-blue-300/50 hover:bg-blue-800/60"
+                    ? "bg-gray-700 hover:bg-gray-600 text-white border border-gray-600" 
+                    : "bg-gray-800/40 text-gray-400/50 hover:bg-gray-700/60"
                 }`}
                 title={user ? "Charger une session sauvegardée" : "Connexion requise pour charger"}
               >
@@ -164,8 +164,8 @@ export default function MainMenu({
                 }}
                 className={`px-3 py-1.5 rounded-lg text-sm transition-all duration-200 ${
                   user 
-                    ? "bg-purple-600/20 text-purple-300 border border-purple-500/30 hover:bg-purple-600/30 hover:border-purple-500/50" 
-                    : "bg-purple-900/40 text-purple-300/50 hover:bg-purple-800/60"
+                    ? "bg-gray-700/20 text-gray-300 border border-gray-500/30 hover:bg-gray-600/30 hover:border-gray-500/50" 
+                    : "bg-gray-800/40 text-gray-400/50 hover:bg-gray-700/60"
                 }`}
                 title={user ? "Partager la session par lien" : "Connexion requise pour partager"}
               >
@@ -182,8 +182,8 @@ export default function MainMenu({
                 }}
                 className={`px-3 py-1.5 rounded-lg text-sm transition-all duration-200 ${
                   user 
-                    ? "bg-orange-600/20 text-orange-300 border border-orange-500/30 hover:bg-orange-600/30 hover:border-orange-500/50" 
-                    : "bg-orange-900/40 text-orange-300/50 hover:bg-orange-800/60"
+                    ? "bg-gray-700/20 text-gray-300 border border-gray-500/30 hover:bg-gray-600/30 hover:border-gray-500/50" 
+                    : "bg-gray-800/40 text-gray-400/50 hover:bg-gray-700/60"
                 }`}
                 title={user ? "Exporter la session en JSON" : "Connexion requise pour exporter"}
               >
@@ -200,8 +200,8 @@ export default function MainMenu({
                 }}
                 className={`px-3 py-1.5 rounded-lg text-sm transition-all duration-200 ${
                   user 
-                    ? "bg-indigo-600/20 text-indigo-300 border border-indigo-500/30 hover:bg-indigo-600/30 hover:border-indigo-500/50" 
-                    : "bg-indigo-900/40 text-indigo-300/50 hover:bg-indigo-800/60"
+                    ? "bg-gray-700/20 text-gray-300 border border-gray-500/30 hover:bg-gray-600/30 hover:border-gray-500/50" 
+                    : "bg-gray-800/40 text-gray-400/50 hover:bg-gray-700/60"
                 }`}
                 title={user ? "Importer une session depuis JSON" : "Connexion requise pour importer"}
               >
@@ -226,8 +226,8 @@ export default function MainMenu({
               }}
               className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 ${
                 user && itemsCount > 0
-                  ? "bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg hover:shadow-emerald-500/25" 
-                  : "bg-emerald-900/40 text-emerald-300/50 hover:bg-emerald-800/60"
+                  ? "bg-gray-700 hover:bg-gray-600 text-white shadow-lg hover:shadow-gray-500/25" 
+                  : "bg-gray-800/40 text-gray-400/50 hover:bg-gray-700/60"
               }`}
               title={user ? "Mettre tous les items en vente" : "Connexion requise"}
               disabled={!user || itemsCount === 0 || saleLoading}
@@ -245,8 +245,8 @@ export default function MainMenu({
               }}
               className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 ${
                 user 
-                  ? "bg-blue-600 hover:bg-blue-500 text-white shadow-lg hover:shadow-blue-500/25" 
-                  : "bg-blue-900/40 text-blue-300/50 hover:bg-blue-800/60"
+                  ? "bg-gray-700 hover:bg-gray-600 text-white shadow-lg hover:shadow-gray-500/25" 
+                  : "bg-gray-800/40 text-gray-400/50 hover:bg-gray-700/60"
               }`}
               title={user ? "Voir mes items en vente" : "Connexion requise"}
             >
@@ -263,8 +263,8 @@ export default function MainMenu({
               }}
               className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 ${
                 user 
-                  ? "bg-purple-600 hover:bg-purple-500 text-white shadow-lg hover:shadow-purple-500/25" 
-                  : "bg-purple-900/40 text-purple-300/50 hover:bg-purple-800/60"
+                  ? "bg-gray-700 hover:bg-gray-600 text-white shadow-lg hover:shadow-gray-500/25" 
+                  : "bg-gray-800/40 text-gray-400/50 hover:bg-gray-700/60"
               }`}
               title={user ? "Voir mes statistiques de vente" : "Connexion requise"}
             >
@@ -300,8 +300,8 @@ export default function MainMenu({
             disabled={!itemsCount}
             className={`px-2 py-1 rounded-lg text-xs transition-all duration-200 ${
               itemsCount 
-                ? "bg-slate-600 hover:bg-slate-500 text-white" 
-                : "bg-slate-800/50 text-slate-500 cursor-not-allowed"
+                ? "bg-gray-700 hover:bg-gray-600 text-white" 
+                : "bg-gray-800/50 text-gray-500 cursor-not-allowed"
             }`}
             title="Rafraîchir les prix"
           >
@@ -321,8 +321,8 @@ export default function MainMenu({
             }}
             className={`mobile-menu-item px-3 py-2 rounded-lg text-sm menu-button ${
               user 
-                ? "bg-emerald-600/20 text-emerald-300 border border-emerald-500/30" 
-                : "bg-emerald-900/40 text-emerald-300/50"
+                ? "bg-gray-700/20 text-gray-300 border border-gray-500/30" 
+                : "bg-gray-800/40 text-gray-400/50"
             }`}
             title={user ? "Enregistrer" : "Connexion requise"}
           >
@@ -339,8 +339,8 @@ export default function MainMenu({
             }}
             className={`mobile-menu-item px-3 py-2 rounded-lg text-sm menu-button ${
               user 
-                ? "bg-blue-600/20 text-blue-300 border border-blue-500/30" 
-                : "bg-blue-900/40 text-blue-300/50"
+                ? "bg-gray-700/20 text-gray-300 border border-gray-500/30" 
+                : "bg-gray-800/40 text-gray-400/50"
             }`}
             title={user ? "Charger" : "Connexion requise"}
           >
@@ -352,8 +352,8 @@ export default function MainMenu({
             disabled={selectedForComparison.size < 2}
             className={`mobile-menu-item px-3 py-2 rounded-lg text-sm menu-button ${
               selectedForComparison.size >= 2 
-                ? "bg-blue-600/20 text-blue-300 border border-blue-500/30" 
-                : "bg-blue-900/40 text-blue-300/50"
+                ? "bg-gray-700/20 text-gray-300 border border-gray-500/30" 
+                : "bg-gray-800/40 text-gray-400/50"
             }`}
             title="Comparer"
           >
@@ -383,8 +383,8 @@ export default function MainMenu({
                 disabled={itemsCount === 0 || saleLoading}
                 className={`px-2 py-1 rounded text-xs font-medium transition-all duration-200 ${
                   itemsCount > 0
-                    ? "bg-emerald-600 hover:bg-emerald-500 text-white" 
-                    : "bg-emerald-900/40 text-emerald-300/50"
+                    ? "bg-gray-700 hover:bg-gray-600 text-white" 
+                    : "bg-gray-800/40 text-gray-400/50"
                 }`}
                 title="Vendre tout"
               >
@@ -393,7 +393,7 @@ export default function MainMenu({
               
               <button
                 onClick={onOpenSalesModal}
-                className="px-2 py-1 rounded text-xs font-medium bg-blue-600 hover:bg-blue-500 text-white transition-all duration-200"
+                className="px-2 py-1 rounded text-xs font-medium bg-gray-700 hover:bg-gray-600 text-white transition-all duration-200"
                 title="Mes ventes"
               >
                 📦 Ventes
@@ -401,7 +401,7 @@ export default function MainMenu({
               
               <button
                 onClick={onOpenDashboardModal}
-                className="px-2 py-1 rounded text-xs font-medium bg-purple-600 hover:bg-purple-500 text-white transition-all duration-200"
+                className="px-2 py-1 rounded text-xs font-medium bg-gray-700 hover:bg-gray-600 text-white transition-all duration-200"
                 title="Dashboard"
               >
                 📊 Stats
