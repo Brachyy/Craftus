@@ -42,7 +42,7 @@ export default function SharePromotion({ user, selectedServer, isHelperOpen }) {
   const handleShare = async () => {
     const shareData = {
       title: 'Craftus - Calculateur de rentabilité Dofus',
-      text: 'Découvre Craftus, l\'outil gratuit pour optimiser tes crafts dans Dofus ! Plus d\'utilisateurs = prix plus fiables 🎯',
+      text: 'Découvre Craftus, l\'outil gratuit pour optimiser tes crafts dans Dofus ! Partage avec ta guilde et ton alliance pour des prix plus fiables 🎯',
       url: window.location.origin
     };
 
@@ -56,7 +56,7 @@ export default function SharePromotion({ user, selectedServer, isHelperOpen }) {
     } else {
       // Fallback : copier le lien
       navigator.clipboard.writeText(window.location.origin);
-      alert('Lien copié ! Partage-le avec tes amis pour améliorer la fiabilité des prix 🚀');
+      alert('Lien copié ! Partage-le avec tes amis, ta guilde et ton alliance pour améliorer la fiabilité des prix 🚀');
       handleClosePromotion();
     }
   };
@@ -65,8 +65,8 @@ export default function SharePromotion({ user, selectedServer, isHelperOpen }) {
     <>
       {/* Message de promotion du partage */}
       {showPromotion && (
-        <div className="fixed top-4 right-4 z-50 max-w-sm">
-          <div className={`${colors.panel} rounded-xl p-4 shadow-2xl border ${colors.border} animate-slide-in-right relative overflow-hidden`}>
+        <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2 z-50 max-w-md mx-4">
+          <div className={`${colors.panel} rounded-xl p-4 shadow-2xl border ${colors.border} animate-slide-in-bottom relative overflow-hidden`}>
             {/* Effet de brillance */}
             <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-shine"></div>
             
@@ -79,8 +79,8 @@ export default function SharePromotion({ user, selectedServer, isHelperOpen }) {
                   Partage Craftus !
                 </h3>
                 <p className="text-slate-300 text-xs leading-relaxed mb-3">
-                  Plus il y a d'utilisateurs, plus les prix sont fiables car renseignés plus souvent. 
-                  Partage avec tes amis pour améliorer l'outil ! 🌟
+                  Plus il y a d'utilisateurs, plus les prix sont fiables ! 
+                  Partage avec tes amis, ta guilde et ton alliance dans le jeu ! 🌟
                 </p>
                 <div className="flex gap-2">
                   <button
@@ -161,34 +161,19 @@ export default function SharePromotion({ user, selectedServer, isHelperOpen }) {
       )}
 
       <style>{`
-        @keyframes slide-in-right {
+        @keyframes slide-in-bottom {
           from {
-            transform: translateX(100%);
+            transform: translateY(100%);
             opacity: 0;
           }
           to {
-            transform: translateX(0);
+            transform: translateY(0);
             opacity: 1;
           }
         }
         
-        @keyframes slide-in-left {
-          from {
-            transform: translateX(-100%);
-            opacity: 0;
-          }
-          to {
-            transform: translateX(0);
-            opacity: 1;
-          }
-        }
-        
-        .animate-slide-in-right {
-          animation: slide-in-right 0.3s ease-out;
-        }
-        
-        .animate-slide-in-left {
-          animation: slide-in-left 0.3s ease-out;
+        .animate-slide-in-bottom {
+          animation: slide-in-bottom 0.3s ease-out;
         }
       `}</style>
     </>
