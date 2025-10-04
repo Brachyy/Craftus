@@ -76,7 +76,7 @@ const RANK_EFFECTS = {
   },
 };
 
-export default function CommunityReward({ user, userName, rankUpdateTrigger }) {
+export default function CommunityReward({ user, userName }) {
   const [todayUsers, setTodayUsers] = useState(0);
   const [userContribution, setUserContribution] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -349,7 +349,7 @@ export default function CommunityReward({ user, userName, rankUpdateTrigger }) {
     if (user) {
       fetchCommunityStats();
     }
-  }, [user, rankUpdateTrigger]);
+  }, [user]);
 
   if (loading) {
     return (
@@ -362,10 +362,10 @@ export default function CommunityReward({ user, userName, rankUpdateTrigger }) {
     );
   }
 
-  // Ne pas afficher si l'utilisateur n'a pas contribué aujourd'hui
-  if (userContribution === 0) {
-    return null;
-  }
+  // Toujours afficher le message de remerciement pour les utilisateurs connectés
+  // if (userContribution === 0) {
+  //   return null;
+  // }
 
   return (
     <div className={`mb-4 rounded-2xl border border-yellow-500/30 bg-gradient-to-r from-yellow-900/20 to-orange-900/20 ${colors.panel} p-4 relative overflow-hidden`}>
@@ -648,7 +648,15 @@ export default function CommunityReward({ user, userName, rankUpdateTrigger }) {
             </h3>
             
             <p className="text-slate-300 text-sm mb-3">
-              Vous avez renseigné <span className="text-yellow-400 font-semibold">{userContribution}</span> prix aujourd'hui. Merci pour votre contribution !
+              {userContribution > 0 ? (
+                <>
+                  Vous avez renseigné <span className="text-yellow-400 font-semibold">{userContribution}</span> prix aujourd'hui. Merci pour votre contribution !
+                </>
+              ) : (
+                <>
+                  Bienvenue dans la communauté Craftus ! Commencez à contribuer en ajoutant des prix pour aider les autres joueurs.
+                </>
+              )}
             </p>
             
             <div className="flex items-center gap-2 text-xs text-slate-400">

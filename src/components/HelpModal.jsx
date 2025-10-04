@@ -114,6 +114,45 @@ function HelpModal({ isOpen, onClose }) {
                       </div>
                     </div>
                   </div>
+
+                  {/* Section "Pourquoi Craftus" */}
+                  <div className="bg-gradient-to-r from-emerald-500/20 to-blue-500/20 p-6 rounded-xl border border-emerald-500/30">
+                    <h4 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
+                      🚀 Pourquoi choisir Craftus ?
+                    </h4>
+                    <div className="grid md:grid-cols-3 gap-4 mb-4">
+                      <div className="text-center">
+                        <div className="text-3xl mb-2">⚡</div>
+                        <h5 className="font-semibold text-emerald-400 mb-2">Rapide & Simple</h5>
+                        <p className="text-slate-300 text-sm">Calculez la rentabilité en 30 secondes. Plus besoin de calculer à la main !</p>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-3xl mb-2">👥</div>
+                        <h5 className="font-semibold text-blue-400 mb-2">Communauté Active</h5>
+                        <p className="text-slate-300 text-sm">Plus de 1000 utilisateurs contribuent aux prix. Plus il y a d'utilisateurs, plus c'est fiable !</p>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-3xl mb-2">🏆</div>
+                        <h5 className="font-semibold text-purple-400 mb-2">Système de Rangs</h5>
+                        <p className="text-slate-300 text-sm">Contribuez aux prix et montez en rang : de Boufton à Gardien du Krosmoz !</p>
+                      </div>
+                    </div>
+                    
+                    {/* Témoignages */}
+                    <div className="bg-slate-800/50 rounded-lg p-4">
+                      <h5 className="text-lg font-semibold text-white mb-3">💬 Ce que disent nos utilisateurs</h5>
+                      <div className="grid md:grid-cols-2 gap-4">
+                        <div className="bg-slate-700/50 rounded-lg p-3">
+                          <p className="text-slate-300 italic text-sm mb-2">"Grâce à Craftus, j'ai doublé mes profits en crafts ! Les prix communautaires sont super fiables."</p>
+                          <div className="text-emerald-400 font-semibold text-xs">- Jean, Chasseur de Dofus</div>
+                        </div>
+                        <div className="bg-slate-700/50 rounded-lg p-3">
+                          <p className="text-slate-300 italic text-sm mb-2">"Enfin un outil simple et efficace. Le système de rangs est motivant !"</p>
+                          <div className="text-blue-400 font-semibold text-xs">- Marie, Protecteur des Mois</div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               )}
 

@@ -7,9 +7,11 @@ import ComparisonTable from "./components/ComparisonTable";
 import ShoppingList from "./components/ShoppingList";
 
 // Analytics
-import { analytics, initAnalytics, setUserProperties } from "./lib/analytics";
+import AdBlockDetector from "./components/AdBlockDetector";
+import AdBlockInfo from "./components/AdBlockInfo";
+import { loadAnalyticsOptimized, isAnalyticsAvailable, trackEventOptimized, setUserPropertiesOptimized } from "./lib/analyticsOptimized";
 
-import { itemAnkamaId, itemImage, itemLevel, itemName } from "./lib/utils";
+import { itemAnkamaId, itemImage, itemLevel, itemName, isEquipment } from "./lib/utils";
 import {
   apiGET,
   searchItems,
@@ -32,15 +34,15 @@ import MainMenu from "./components/MainMenu";
 import AuthRequired from "./components/AuthRequired";
 import AuthLoading from "./components/AuthLoading";
 import FloatingNav from "./components/FloatingNav";
-import CommunityCallToAction from "./components/CommunityCallToAction";
-import CommunityReward from "./components/CommunityReward";
 import UserRankDisplay from "./components/UserRankDisplay";
-import { updateUserRank } from "./lib/userRanks";
 import UsernameModal from "./components/UsernameModal";
 import Footer from "./components/Footer";
 import SharePromotion from "./components/SharePromotion";
 import SiteAlert from "./components/SiteAlert";
-import AnalyticsTest from "./components/AnalyticsTest";
+import CommunityCallToAction from "./components/CommunityCallToAction";
+import CommunityReward from "./components/CommunityReward";
+import RankProgressBar from "./components/RankProgressBar";
+import RankCongratulationPopup from "./components/RankCongratulationPopup";
 
 // Favoris Firebase
 import { 
@@ -62,6 +64,7 @@ import {
 } from "./lib/communityPrices";
 import { getUserName, setUserName } from "./lib/userNames";
 import { saveUserProfile } from "./lib/userProfiles";
+import { getUserRankData, updateUserRank } from "./lib/userRanks";
 
 // Logos
 import craftusLogo from "./assets/craftus.png";
@@ -70,13 +73,14 @@ import craftusLogoNew from "./assets/craftus_logo.png";
 const TAX_RATE = 0.02;
 
 // ---- calculs (net = revenu brut - taxe 2%) ----
-function computeInvestment(it) {
-  const perUnit = (it.ingredients || []).reduce((sum, ing) => {
-    if (ing.farmed) return sum;
-    return sum + (ing.unitPrice ?? 0) * ing.qty;
-  }, 0);
-  return perUnit * (it.craftCount || 1);
-}
+  function computeInvestment(it) {
+    const perUnit = (it.ingredients || []).reduce((sum, ing) => {
+      if (ing.farmed) return sum;
+      return sum + (ing.unitPrice ?? 0) * ing.qty;
+    }, 0);
+    const runeInvestment = isEquipment(it) ? Number(it.runeInvestment || 0) : 0;
+    return (perUnit + runeInvestment) * (it.craftCount || 1);
+  }
 function computeGrossRevenue(it) {
   return (it.sellPrice ?? 0) * (it.craftCount || 1);
 }
@@ -154,7 +158,15 @@ export default function App() {
   const [showAuthRequired, setShowAuthRequired] = useState(false);
   const [userName, setUserNameState] = useState(null);
   const [showUsernameModal, setShowUsernameModal] = useState(false);
+  const [isAdBlocked, setIsAdBlocked] = useState(false);
+
+  // États pour les rangs utilisateur
+  const [userRank, setUserRank] = useState(null);
+  const [userRankData, setUserRankData] = useState(null);
+  const [userContribution, setUserContribution] = useState(0);
   const [rankUpdateTrigger, setRankUpdateTrigger] = useState(0);
+  const [showRankCongratulation, setShowRankCongratulation] = useState(false);
+  const [congratulationRankName, setCongratulationRankName] = useState('');
 
   // Filtres visibles
   const [equipmentOnly, setEquipmentOnly] = useState(false);
@@ -201,6 +213,25 @@ export default function App() {
     localStorage.setItem('craftus_selected_server', serverId);
   }, [serverId]);
 
+  // Recharger les données de rang quand le trigger change
+  useEffect(() => {
+    if (user && userName && rankUpdateTrigger > 0) {
+      const reloadRankData = async () => {
+        try {
+          const rankData = await getUserRankData(user.uid);
+          if (rankData) {
+            setUserRankData(rankData);
+            setUserRank(rankData.currentRank);
+            setUserContribution(rankData.monthlyParticipations);
+          }
+        } catch (error) {
+          console.error("Erreur lors du rechargement du rang:", error);
+        }
+      };
+      reloadRankData();
+    }
+  }, [rankUpdateTrigger, user, userName]);
+
   // Auth
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (u) => {
@@ -208,26 +239,47 @@ export default function App() {
       setAuthLoading(false); // Fin du chargement d'authentification
       if (u) {
         loadFavorites(u.uid);
-        // Charger le nom d'utilisateur si connecté
+        // Charger le nom d'utilisateur et le rang si connecté
         try {
           const existingUserName = await getUserName(u.uid);
           if (existingUserName) {
             setUserNameState(existingUserName);
+            
+            // Charger les données de rang de l'utilisateur
+            const rankData = await getUserRankData(u.uid);
+            if (rankData) {
+              setUserRankData(rankData);
+              setUserRank(rankData.currentRank);
+              setUserContribution(rankData.monthlyParticipations);
+            } else {
+              // Créer un nouveau rang si l'utilisateur n'en a pas
+              const newRankData = await updateUserRank(u.uid, existingUserName, 0);
+              if (newRankData) {
+                setUserRankData(newRankData);
+                setUserRank(newRankData.currentRank);
+                setUserContribution(newRankData.monthlyParticipations);
+              }
+            }
+            
             // Analytics : Utilisateur connecté
-            setUserProperties(u.uid, existingUserName, 'unknown', serverId);
-            analytics.userSignIn('google');
+            setUserPropertiesOptimized(u.uid, existingUserName, rankData?.currentRank || 'boufton', serverId);
+            trackEventOptimized('user_sign_in', { method: 'google' });
           }
         } catch (error) {
           console.error("Erreur lors du chargement du nom d'utilisateur:", error);
-          analytics.errorOccurred('username_load', error.message);
+          trackEventOptimized('error_occurred', { error_type: 'username_load', error_message: error.message });
         }
       } else {
         // Utilisateur déconnecté, nettoyer les favoris et le nom
         setFavorites(new Set());
         setUserNameState(null);
         setFavoriteItems([]);
+        // Nettoyer les données de rang
+        setUserRank(null);
+        setUserRankData(null);
+        setUserContribution(0);
         // Analytics : Utilisateur déconnecté
-        analytics.userSignOut();
+        trackEventOptimized('user_sign_out', {});
       }
     });
     return () => unsub();
@@ -269,12 +321,40 @@ export default function App() {
     }
   }, [itemTypesMap, breeds, user]);
 
+
   // Pré-remplissage différé (après restauration / ouverture lien)
   const [pendingPrefill, setPendingPrefill] = useState(false);
 
-  // Initialiser Analytics
+  // Gestion du bloqueur de pub
+  const handleAdBlockDetected = () => {
+    setIsAdBlocked(true);
+  };
+
+  const handleAdBlockResolved = () => {
+    setIsAdBlocked(false);
+  };
+
+  // Gestion du popup de félicitations de rang
+  const handleShowRankCongratulation = (rankName) => {
+    setCongratulationRankName(rankName);
+    setShowRankCongratulation(true);
+  };
+
+  const handleCloseRankCongratulation = () => {
+    setShowRankCongratulation(false);
+  };
+
+  // Initialiser Analytics de manière optimisée
   useEffect(() => {
-    initAnalytics();
+    const initAnalyticsOptimized = async () => {
+      try {
+        await loadAnalyticsOptimized();
+      } catch (error) {
+        setIsAdBlocked(true);
+      }
+    };
+
+    initAnalyticsOptimized();
   }, []);
 
   // Charger types + classes
@@ -483,7 +563,7 @@ export default function App() {
     addToSearchHistory(raw.displayName || raw.name?.fr || "");
     
     // Analytics : Item ajouté
-    analytics.itemAdded(raw.displayName || raw.name?.fr || "", serverId);
+    trackEventOptimized('item_added', { item_name: raw.displayName || raw.name?.fr || "", server_id: serverId });
   }
 
   // Fonction pour forcer le rechargement des données communautaires
@@ -505,11 +585,11 @@ export default function App() {
         setShowAlert(false);
         
         // Analytics : Serveur changé
-        analytics.serverChanged(previousServerId, newServerId);
+        trackEventOptimized('server_changed', { previous_server: previousServerId, new_server: newServerId });
         
-        // Actualiser directement les prix après confirmation
+        // Actualiser directement les prix après confirmation avec le nouveau serveur
         if (items.length > 0) {
-          await executeRefresh();
+          await executeRefreshWithServer(newServerId);
         }
       },
       onCancel: () => {
@@ -574,18 +654,88 @@ export default function App() {
     }
   };
 
+  // Fonction pour actualiser avec un serveur spécifique (pour changement de serveur)
+  const executeRefreshWithServer = async (targetServerId) => {
+    try {
+      const refreshed = await Promise.all(
+        items.map(async (it) => {
+          const copy = { ...it, ingredients: it.ingredients.map((x) => ({ ...x })) };
+
+          try {
+            const d = await getCommunityPrice(PRICE_KIND.SELL, copy.ankamaId, targetServerId);
+            if (d?.lastPrice != null) {
+              copy.sellPrice = Number(d.lastPrice);
+            } else {
+              copy.sellPrice = null; // Vider le prix s'il n'existe pas sur ce serveur
+            }
+          } catch (e) {
+            console.warn("[refresh] sell", { itemId: copy.ankamaId, e });
+            copy.sellPrice = null; // Vider le prix en cas d'erreur
+          }
+
+          for (let i = 0; i < copy.ingredients.length; i++) {
+            const ing = copy.ingredients[i];
+            try {
+              const d = await getCommunityPrice(PRICE_KIND.ING, ing.ankamaId, targetServerId);
+              if (d?.lastPrice != null) {
+                ing.unitPrice = Number(d.lastPrice);
+              } else {
+                ing.unitPrice = null; // Vider le prix s'il n'existe pas sur ce serveur
+              }
+            } catch (e) {
+              console.warn("[refresh] ing", { ingId: ing.ankamaId, e });
+              ing.unitPrice = null; // Vider le prix en cas d'erreur
+            }
+          }
+          return copy;
+        })
+      );
+      
+      setItems(refreshed);
+      
+      // Déclencher un rechargement des données communautaires
+      setTimeout(() => {
+        triggerRefresh();
+      }, 500);
+    } catch (e) {
+      console.error("[executeRefreshWithServer] failed", e);
+    }
+  };
+
+
   // Rafraîchir tous les prix depuis la BDD communautaire (DESTRUCTIF après confirmation)
-  async function refreshCommunityPricesForAll() {
+  async function refreshCommunityPricesForAll(showAlert = true) {
     if (!items.length) return;
     
-    // Utiliser notre alerte intégrée au lieu de window.confirm
-    setAlertData({
-      title: 'Actualiser les prix communautaires',
-      message: 'Cette action va écraser vos prix saisis localement avec les derniers prix communautaires. Continuer ?',
-      type: 'warning'
-    });
-    setShowAlert(true);
+    if (showAlert) {
+      // Utiliser notre alerte intégrée au lieu de window.confirm
+      setAlertData({
+        title: 'Actualiser les prix communautaires',
+        message: 'Cette action va écraser vos prix saisis localement avec les derniers prix communautaires. Continuer ?',
+        type: 'warning'
+      });
+      setShowAlert(true);
+    } else {
+      // Exécuter directement sans alerte
+      return await executeRefresh();
+    }
   }
+
+  // Mise à jour investissement runes
+  const updateRuneInvestment = (itemKey, runeInvestment) => {
+    const val = runeInvestment === "" || runeInvestment == null ? undefined : Number(runeInvestment);
+    setItems((prev) =>
+      prev.map((it) =>
+        it.key !== itemKey ? it : { ...it, runeInvestment: val }
+      )
+    );
+  };
+
+  // Commit investissement runes vers BDD communautaire
+  const commitRuneInvestment = async (itemKey, previousValue) => {
+    // Ne pas enregistrer les prix des runes en base de données
+    return;
+  };
 
   // Mises à jour inputs
   const updateIngredientPrice = async (itemKey, ingId, price) => {
@@ -648,7 +798,7 @@ export default function App() {
     
     // Analytics : Item supprimé
     if (item) {
-      analytics.itemRemoved(item.displayName || `Item ${item.ankamaId}`);
+      trackEventOptimized('item_removed', { item_name: item.displayName || `Item ${item.ankamaId}` });
     }
   };
   const clearAll = () => {
@@ -841,6 +991,7 @@ export default function App() {
       ...it,
       sellPrice: undefined,
       ingredients: it.ingredients.map((ing) => ({ ...ing, unitPrice: undefined })),
+      runeInvestment: undefined, // Ne pas sauvegarder les runes
     }));
     return {
       version: 4,
@@ -858,6 +1009,7 @@ export default function App() {
       if (i.tags.classId == null) i.tags.classId = "";
       i.sellPrice = undefined;
       i.ingredients = (i.ingredients || []).map((ing) => ({ ...ing, unitPrice: undefined }));
+      i.runeInvestment = undefined; // Ne pas restaurer les runes
     });
     setItems(its);
     setSort(snap.sort || { key: "gain", dir: "desc" });
@@ -909,11 +1061,11 @@ export default function App() {
       alert("Lien copié dans le presse-papiers !");
       
       // Analytics : Lien partagé
-      analytics.linkShared('clipboard');
+      trackEventOptimized('link_shared', { method: 'clipboard' });
     } catch (e) {
       alert("Impossible de copier le lien. Voir console.");
       console.error(e);
-      analytics.errorOccurred('share_link', e.message);
+      trackEventOptimized('error_occurred', { error_type: 'share_link', error_message: e.message });
     }
   }
   function exportJSON() {
@@ -932,7 +1084,7 @@ export default function App() {
     URL.revokeObjectURL(a.href);
     
     // Analytics : JSON exporté
-    analytics.jsonExported();
+    trackEventOptimized('json_exported', {});
   }
   function importJSON() {
     // Vérifier si l'utilisateur est connecté
@@ -949,10 +1101,10 @@ export default function App() {
       alert("Session chargée !");
       
       // Analytics : JSON importé
-      analytics.jsonImported();
+      trackEventOptimized('json_imported', {});
     } catch {
       alert("JSON invalide.");
-      analytics.errorOccurred('json_import', 'Invalid JSON format');
+      trackEventOptimized('error_occurred', { error_type: 'json_import', error_message: 'Invalid JSON format' });
     }
   }
 
@@ -999,6 +1151,12 @@ export default function App() {
 
   return (
     <div className={`${colors.bg} text-slate-100 min-h-screen p-4 md:p-6`}>
+      {/* Détecteur de bloqueur de pub */}
+      <AdBlockDetector 
+        onAdBlockDetected={handleAdBlockDetected}
+        onAdBlockResolved={handleAdBlockResolved}
+      />
+      
       <div className="max-w-6xl mx-auto">
         {/* Header avec logos */}
         <header className="flex items-center justify-between gap-3 mb-4">
@@ -1029,7 +1187,7 @@ export default function App() {
             <button
               onClick={() => {
                 setOpenHelp(true);
-                analytics.helpOpened();
+                trackEventOptimized('help_opened', {});
               }}
               className="p-2 text-slate-400 hover:text-slate-200 hover:bg-slate-700/50 rounded-lg transition-colors"
               title="Aide et guide d'utilisation"
@@ -1103,6 +1261,7 @@ export default function App() {
           onImportJSON={importJSON}
         />
 
+
         {/* Appel à l'action communautaire pour les utilisateurs non connectés */}
         {!user && (
           <CommunityCallToAction onSignIn={handleSignInWithGoogle} />
@@ -1110,7 +1269,27 @@ export default function App() {
 
         {/* Récompense communautaire pour les utilisateurs connectés qui ont contribué */}
         {user && (
-          <CommunityReward user={user} userName={userName} rankUpdateTrigger={rankUpdateTrigger} />
+          <CommunityReward user={user} userName={userName} />
+        )}
+
+        {/* Barre de progression du rang */}
+        {user && userRank && (
+          <RankProgressBar 
+            userRank={userRank} 
+            userContribution={userContribution}
+            userRankData={userRankData}
+            onShowRankPopup={handleShowRankCongratulation}
+          />
+        )}
+
+        {/* Message de bloqueur de pub intégré dans le contenu */}
+        {isAdBlocked && (
+          <div className="mb-6">
+            <AdBlockInfo 
+              isVisible={isAdBlocked} 
+              onDismiss={() => setIsAdBlocked(false)} 
+            />
+          </div>
         )}
 
         {/* Filtres (on enlève le checkbox “craftables”) */}
@@ -1225,6 +1404,8 @@ export default function App() {
               onUpdateCraftCount={updateCraftCount}
               onUpdateIngredientPrice={updateIngredientPrice}
               onCommitIngredientPrice={commitIngredientPrice}
+              onUpdateRuneInvestment={updateRuneInvestment}
+              onCommitRuneInvestment={commitRuneInvestment}
               onToggleComparison={toggleComparison}
               isSelectedForComparison={selectedForComparison.has(it.key)}
               onToggleFavorite={toggleFavorite}
@@ -1232,10 +1413,6 @@ export default function App() {
               serverId={serverId}
               refreshTrigger={refreshTrigger}
               taxRate={TAX_RATE}
-              computeInvestment={computeInvestment}
-              computeNetRevenue={computeNetRevenue}
-              computeGain={computeGain}
-              computeCoeff={computeCoeff}
             />
           ))}
         </div>
@@ -1243,13 +1420,14 @@ export default function App() {
         {/* 🛒 Shopping list — entre le fil et le comparatif */}
         {items.length > 0 && (
           <div id="shopping-section" className="mt-6">
-            <ShoppingList
-              items={items}
-              onUpdateIngredientPrice={updateIngredientPrice}
-              onCommitIngredientPrice={commitIngredientPrice}
-              serverId={serverId}
-              refreshTrigger={refreshTrigger}
-            />
+        <ShoppingList
+          items={items}
+          onUpdateIngredientPrice={updateIngredientPrice}
+          onCommitIngredientPrice={commitIngredientPrice}
+          onUpdateRuneInvestment={updateRuneInvestment}
+          serverId={serverId}
+          refreshTrigger={refreshTrigger}
+        />
           </div>
         )}
 
@@ -1338,7 +1516,7 @@ export default function App() {
         isOpen={openHelp}
         onClose={() => {
           setOpenHelp(false);
-          analytics.helpClosed();
+          trackEventOptimized('help_closed', {});
         }}
       />
       
@@ -1358,8 +1536,13 @@ export default function App() {
         type={alertData.type}
       />
       
-      {/* Composant de test Analytics (développement seulement) */}
-      {process.env.NODE_ENV === 'development' && <AnalyticsTest />}
+      {/* Popup de félicitations de rang */}
+      <RankCongratulationPopup
+        isVisible={showRankCongratulation}
+        rankName={congratulationRankName}
+        onClose={handleCloseRankCongratulation}
+      />
+      
     </div>
   );
 }

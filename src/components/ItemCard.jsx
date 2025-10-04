@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { colors } from "../theme/colors";
-import { currency, itemLevel, toInt } from "../lib/utils";
+import { currency, itemLevel, toInt, isEquipment } from "../lib/utils";
 import PriceHistoryHover, { PRICE_KIND } from "./PriceHistoryHover";
 import PriceWarning, { getInputColor } from "./PriceWarning";
 import { getCommunityPrice } from "../lib/communityPrices";
@@ -13,6 +13,8 @@ export default function ItemCard({
   onUpdateCraftCount,
   onUpdateIngredientPrice,
   onCommitIngredientPrice,
+  onUpdateRuneInvestment,
+  onCommitRuneInvestment,
   onCommitSellPrice,
   onToggleComparison,
   isSelectedForComparison,
@@ -85,14 +87,21 @@ export default function ItemCard({
 
   const craftCount = Math.max(1, Number(it.craftCount || 1));
 
+  // Calculer l'investissement en incluant les runes
   const investment = useMemo(() => {
-    return (it.ingredients || []).reduce((sum, ing) => {
+    // Calculer le coût des ingrédients
+    const ingredientsCost = (it.ingredients || []).reduce((sum, ing) => {
       if (ing.farmed) return sum;
       const q = Number(ing.qty || 0);
       const p = Math.round(Number(ing.unitPrice || 0));
       return sum + q * p;
-    }, 0) * craftCount;
-  }, [it.ingredients, craftCount]);
+    }, 0);
+    
+    // Ajouter le coût des runes (seulement pour les équipements)
+    const runeCost = isEquipment(it) ? Number(it.runeInvestment || 0) : 0;
+    
+    return (ingredientsCost + runeCost) * craftCount;
+  }, [it.ingredients, it.runeInvestment, it, craftCount]);
 
   const unitSell = Math.round(Number(it.sellPrice || 0));
   const unitTax = Math.floor(unitSell * 0.02);
@@ -295,6 +304,43 @@ export default function ItemCard({
           </div>
         </div>
       </div>
+
+      {/* Investissement Runes - seulement pour les équipements */}
+      {isEquipment(it) && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
+          <div>
+            <div className="text-xs text-slate-400 mb-1">Investissement Runes (k)</div>
+            <input
+              type="text"
+              inputMode="numeric"
+              tabIndex={3}
+              value={it.runeInvestment ?? ""}
+              onFocus={(e) => {
+                handleFocus(e);
+                // Sauvegarder la valeur actuelle au focus
+                setPreviousValues(prev => ({
+                  ...prev,
+                  [`${it.key}_runeInvestment`]: it.runeInvestment
+                }));
+              }}
+              onChange={(e) => onUpdateRuneInvestment?.(it.key, toInt(e.target.value))}
+              onBlur={() => {
+                if (onCommitRuneInvestment && it.runeInvestment != null && Number.isFinite(Number(it.runeInvestment))) {
+                  const key = `${it.key}_runeInvestment`;
+                  const previousValue = previousValues[key];
+                  onCommitRuneInvestment(it.key, previousValue);
+                }
+              }}
+              className="h-10 w-full rounded-xl bg-[#1b1f26] border border-white/10 px-3"
+              placeholder="0"
+            />
+            <div className="text-xs text-slate-400 mt-1">
+              Coût des runes de forgemagie
+            </div>
+          </div>
+          <div></div>
+        </div>
+      )}
 
       {/* INGREDIENTS */}
       <div className="mt-2">

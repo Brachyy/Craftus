@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { colors } from "../theme/colors";
-import { currency } from "../lib/utils";
+import { currency, isEquipment } from "../lib/utils";
 import PriceHistoryHover, { PRICE_KIND } from "./PriceHistoryHover";
 import { detectAnomaly } from "../lib/anomalyDetection";
 import { getCommunityPrice } from "../lib/communityPrices";
@@ -10,6 +10,7 @@ export default function ShoppingList({
   items,
   onUpdateIngredientPrice,
   onCommitIngredientPrice,
+  onUpdateRuneInvestment,
   serverId,
   refreshTrigger = 0, // Nouveau prop pour déclencher le rechargement
 }) {
@@ -36,6 +37,8 @@ export default function ShoppingList({
 
   const rows = useMemo(() => {
     const map = new Map();
+    
+    // Traiter les ingrédients normaux
     for (const it of items) {
       const mult = it.craftCount || 1;
       for (const ing of it.ingredients || []) {
@@ -55,12 +58,48 @@ export default function ShoppingList({
         });
       }
     }
-    return Array.from(map.values()).sort((a, b) =>
-      a.name.localeCompare(b.name, "fr")
-    );
+    
+    // Traiter les runes pour les équipements
+    const runeKey = "runes";
+    let totalRuneQty = 0;
+    let runeUnitPrice = undefined;
+    
+    for (const it of items) {
+      if (isEquipment(it)) {
+        const mult = it.craftCount || 1;
+        const runeInvestment = Number(it.runeInvestment || 0);
+        if (runeInvestment > 0) {
+          totalRuneQty += mult;
+          // Utiliser le prix des runes du premier équipement qui en a
+          if (runeUnitPrice === undefined) {
+            runeUnitPrice = runeInvestment;
+          }
+        }
+      }
+    }
+    
+    // Ajouter les runes si nécessaire
+    if (totalRuneQty > 0) {
+      map.set(runeKey, {
+        id: runeKey,
+        name: "Runes de forgemagie",
+        img: "/src/assets/runes.png", // Image locale des runes
+        qty: totalRuneQty,
+        unitPrice: runeUnitPrice,
+        farmed: false,
+        isRune: true, // Marquer comme rune pour traitement spécial
+      });
+    }
+    
+    return Array.from(map.values()).sort((a, b) => {
+      // Mettre les runes en premier
+      if (a.isRune && !b.isRune) return -1;
+      if (!a.isRune && b.isRune) return 1;
+      return a.name.localeCompare(b.name, "fr");
+    });
   }, [items]);
 
-  // Charger les prix communautaires pour tous les ingrédients
+  // Charger les prix communautaires pour tous les ingrédients (sauf les runes)
   useEffect(() => {
     if (!serverId || !rows.length) return;
 
@@ -68,9 +107,12 @@ export default function ShoppingList({
       const prices = {};
       for (const row of rows) {
         try {
-          const priceData = await getCommunityPrice(PRICE_KIND.ING, row.id, serverId);
-          if (priceData) {
-            prices[row.id] = priceData;
+          // Ne pas charger les prix pour les runes
+          if (!row.isRune) {
+            const priceData = await getCommunityPrice(PRICE_KIND.ING, row.id, serverId);
+            if (priceData) {
+              prices[row.id] = priceData;
+            }
           }
         } catch (error) {
           console.error(`Erreur lors du chargement du prix pour ${row.name}:`, error);
@@ -109,7 +151,8 @@ export default function ShoppingList({
 
   if (!rows.length) return null;
 
-  const grandTotal = rows.reduce(
+  // Calculer le total des ingrédients (incluant les runes)
+  const ingredientsTotal = rows.reduce(
     (s, r) => s + ((r.farmed ? 0 : Math.max(0, Math.round(r.unitPrice ?? 0))) * (r.qty || 0)),
     0
   );
@@ -142,14 +185,31 @@ export default function ShoppingList({
       const n = Number(unitVal);
       v = Number.isFinite(n) ? Math.max(0, Math.round(n)) : "";
     }
-    for (const it of items) {
-      const line = it.ingredients.find((x) => x.ankamaId === ingId);
-      if (line) onUpdateIngredientPrice(it.key, ingId, v);
+    
+    if (ingId === "runes") {
+      // Propagation pour les runes
+      for (const it of items) {
+        if (isEquipment(it) && Number(it.runeInvestment || 0) > 0) {
+          onUpdateRuneInvestment?.(it.key, v);
+        }
+      }
+    } else {
+      // Propagation pour les ingrédients normaux
+      for (const it of items) {
+        const line = it.ingredients.find((x) => x.ankamaId === ingId);
+        if (line) onUpdateIngredientPrice(it.key, ingId, v);
+      }
     }
   };
   const commitOnce = (ingId, previousValue) => {
-    const it = items.find((it) => it.ingredients.some((x) => x.ankamaId === ingId));
-    if (it) onCommitIngredientPrice?.(it.key, ingId, previousValue);
+    if (ingId === "runes") {
+      // Ne pas enregistrer les prix des runes
+      return;
+    } else {
+      // Commit pour les ingrédients normaux
+      const it = items.find((it) => it.ingredients.some((x) => x.ankamaId === ingId));
+      if (it) onCommitIngredientPrice?.(it.key, ingId, previousValue);
+    }
   };
 
   // gestion brouillons "total"
@@ -387,10 +447,15 @@ export default function ShoppingList({
       </div>
 
       {/* Cartouche Total achats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-4">
         <div className="rounded-xl bg-[#151A22] border border-white/10 p-3">
           <div className="text-xs text-slate-400">Total achats (k)</div>
-          <div className="text-lg font-semibold">{currency(grandTotal)}</div>
+          <div className="text-lg font-semibold">{currency(ingredientsTotal)}</div>
+        </div>
+        
+        <div className="rounded-xl bg-[#151A22] border border-white/10 p-3">
+          <div className="text-xs text-slate-400">Nombre d'ingrédients</div>
+          <div className="text-lg font-semibold">{rows.length}</div>
         </div>
       </div>
 
