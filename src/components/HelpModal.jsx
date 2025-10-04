@@ -12,6 +12,7 @@ function HelpModal({ isOpen, onClose }) {
     { id: 'search', title: '🔍 Recherche', icon: '📝' },
     { id: 'prices', title: '💰 Prix', icon: '💎' },
     { id: 'analysis', title: '📊 Analyse', icon: '📈' },
+    { id: 'sales', title: '🛒 Système de Vente', icon: '💼' },
     { id: 'colors', title: '🎨 Couleurs', icon: '🌈' },
     { id: 'leaderboard', title: '🏆 Leaderboard', icon: '👑' },
     { id: 'advanced', title: '🚀 Avancé', icon: '⚡' },
@@ -127,29 +128,64 @@ function HelpModal({ isOpen, onClose }) {
                         <p className="text-slate-300 text-sm">Calculez la rentabilité en 30 secondes. Plus besoin de calculer à la main !</p>
                       </div>
                       <div className="text-center">
-                        <div className="text-3xl mb-2">👥</div>
-                        <h5 className="font-semibold text-blue-400 mb-2">Communauté Active</h5>
-                        <p className="text-slate-300 text-sm">Plus de 1000 utilisateurs contribuent aux prix. Plus il y a d'utilisateurs, plus c'est fiable !</p>
-                      </div>
-                      <div className="text-center">
                         <div className="text-3xl mb-2">🏆</div>
                         <h5 className="font-semibold text-purple-400 mb-2">Système de Rangs</h5>
                         <p className="text-slate-300 text-sm">Contribuez aux prix et montez en rang : de Boufton à Gardien du Krosmoz !</p>
                       </div>
+                      <div className="text-center">
+                        <div className="text-3xl mb-2">🛒</div>
+                        <h5 className="font-semibold text-orange-400 mb-2">Suivi des Ventes</h5>
+                        <p className="text-slate-300 text-sm">Gérez vos ventes et suivez vos profits avec des statistiques détaillées !</p>
+                      </div>
                     </div>
                     
-                    {/* Témoignages */}
-                    <div className="bg-slate-800/50 rounded-lg p-4">
-                      <h5 className="text-lg font-semibold text-white mb-3">💬 Ce que disent nos utilisateurs</h5>
-                      <div className="grid md:grid-cols-2 gap-4">
-                        <div className="bg-slate-700/50 rounded-lg p-3">
-                          <p className="text-slate-300 italic text-sm mb-2">"Grâce à Craftus, j'ai doublé mes profits en crafts ! Les prix communautaires sont super fiables."</p>
-                          <div className="text-emerald-400 font-semibold text-xs">- Jean, Chasseur de Dofus</div>
+                    {/* Statut Beta */}
+                    <div className="bg-gradient-to-r from-yellow-500/20 to-orange-500/20 rounded-lg p-4 border border-yellow-500/30">
+                      <h5 className="text-lg font-semibold text-white mb-3 flex items-center gap-2">
+                        ⚠️ Version Beta - Projet Personnel
+                      </h5>
+                      <div className="space-y-3">
+                        <p className="text-slate-300 text-sm">
+                          <span className="text-yellow-400 font-semibold">Craftus est actuellement en version beta</span> - 
+                          C'est un projet personnel développé par un seul développeur pour aider la communauté Dofus.
+                        </p>
+                        <div className="grid md:grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <div className="flex items-center gap-2">
+                              <span className="text-yellow-400">⚠️</span>
+                              <span className="text-slate-300 text-sm">Des bugs peuvent survenir</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-yellow-400">🔧</span>
+                              <span className="text-slate-300 text-sm">Améliorations continues</span>
+                            </div>
+                          </div>
+                          <div className="space-y-2">
+                            <div className="flex items-center gap-2">
+                              <span className="text-yellow-400">👤</span>
+                              <span className="text-slate-300 text-sm">Développement solo</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-yellow-400">💝</span>
+                              <span className="text-slate-300 text-sm">Gratuit et communautaire</span>
+                            </div>
+                          </div>
                         </div>
-                        <div className="bg-slate-700/50 rounded-lg p-3">
-                          <p className="text-slate-300 italic text-sm mb-2">"Enfin un outil simple et efficace. Le système de rangs est motivant !"</p>
-                          <div className="text-blue-400 font-semibold text-xs">- Marie, Protecteur des Mois</div>
-                        </div>
+                      </div>
+                    </div>
+
+                    {/* Appel au partage */}
+                    <div className="bg-gradient-to-r from-blue-500/20 to-purple-500/20 rounded-lg p-4 border border-blue-500/30 mt-4">
+                      <h5 className="text-lg font-semibold text-white mb-3 flex items-center gap-2">
+                        📢 Aidez-nous à grandir !
+                      </h5>
+                      <p className="text-slate-300 text-sm mb-3">
+                        <span className="text-blue-400 font-semibold">Le plein potentiel de Craftus sera atteint si beaucoup de joueurs l'utilisent !</span>
+                        Plus il y a d'utilisateurs, plus les prix communautaires sont fiables et utiles pour tous.
+                      </p>
+                      <div className="flex items-center gap-2">
+                        <span className="text-blue-400">📤</span>
+                        <span className="text-slate-300 text-sm font-semibold">Partagez Craftus avec vos amis et votre guilde !</span>
                       </div>
                     </div>
                   </div>
@@ -288,6 +324,201 @@ function HelpModal({ isOpen, onClose }) {
                 </div>
               )}
 
+              {activeSection === 'sales' && (
+                <div className="space-y-6">
+                  <div className="text-center mb-8">
+                    <div className="w-20 h-20 bg-gradient-to-r from-green-500 to-emerald-500 rounded-full flex items-center justify-center text-4xl mx-auto mb-4">
+                      🛒
+                    </div>
+                    <h3 className="text-2xl font-bold text-white mb-2">Système de Vente</h3>
+                    <p className="text-slate-400">Gérez vos ventes et suivez vos profits</p>
+                  </div>
+
+                  <div className="space-y-6">
+                    {/* Mise en vente */}
+                    <div className="bg-gradient-to-r from-emerald-500/20 to-emerald-600/20 p-6 rounded-xl border border-emerald-500/30">
+                      <div className="flex items-start gap-4">
+                        <div className="text-3xl">📦</div>
+                        <div>
+                          <h4 className="text-xl font-semibold text-white mb-3">Mettre en vente</h4>
+                          <p className="text-slate-300 mb-4">
+                            Enregistrez vos items pour suivre vos ventes et calculer vos profits réels.
+                          </p>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                              <div className="flex items-center gap-2">
+                                <span className="text-emerald-400">✓</span>
+                                <span className="text-slate-300 text-sm">Bouton "Mettre en vente" sur chaque item</span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <span className="text-emerald-400">✓</span>
+                                <span className="text-slate-300 text-sm">"Vendre tout" pour tous les items</span>
+                              </div>
+                            </div>
+                            <div className="space-y-2">
+                              <div className="flex items-center gap-2">
+                                <span className="text-emerald-400">✓</span>
+                                <span className="text-slate-300 text-sm">Données sauvegardées par serveur</span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Mes ventes */}
+                    <div className="bg-gradient-to-r from-blue-500/20 to-blue-600/20 p-6 rounded-xl border border-blue-500/30">
+                      <div className="flex items-start gap-4">
+                        <div className="text-3xl">📋</div>
+                        <div>
+                          <h4 className="text-xl font-semibold text-white mb-3">Mes ventes</h4>
+                          <p className="text-slate-300 mb-4">
+                            Gérez vos items en vente : modifiez les prix, marquez comme vendus ou retirez de la vente.
+                          </p>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                              <div className="flex items-center gap-2">
+                                <span className="text-blue-400">✓</span>
+                                <span className="text-slate-300 text-sm">Liste filtrée par serveur</span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <span className="text-blue-400">✓</span>
+                                <span className="text-slate-300 text-sm">Recherche par nom d'item</span>
+                              </div>
+                            </div>
+                            <div className="space-y-2">
+                              <div className="flex items-center gap-2">
+                                <span className="text-blue-400">✓</span>
+                                <span className="text-slate-300 text-sm">Modification des prix de vente</span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <span className="text-blue-400">✓</span>
+                                <span className="text-slate-300 text-sm">Retrait d'items non vendus</span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Dashboard */}
+                    <div className="bg-gradient-to-r from-purple-500/20 to-purple-600/20 p-6 rounded-xl border border-purple-500/30">
+                      <div className="flex items-start gap-4">
+                        <div className="text-3xl">📊</div>
+                        <div>
+                          <h4 className="text-xl font-semibold text-white mb-3">Dashboard de ventes</h4>
+                          <p className="text-slate-300 mb-4">
+                            Suivez vos performances avec des statistiques détaillées et des graphiques d'évolution.
+                          </p>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                              <h5 className="text-lg font-semibold text-purple-400 mb-3">📈 Statistiques principales</h5>
+                              <div className="space-y-2">
+                                <div className="flex items-center gap-2">
+                                  <span className="text-purple-400">💰</span>
+                                  <span className="text-slate-300 text-sm">Gains totaux (jour/semaine/mois)</span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <span className="text-purple-400">💸</span>
+                                  <span className="text-slate-300 text-sm">Investissement total</span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <span className="text-purple-400">📦</span>
+                                  <span className="text-slate-300 text-sm">Nombre de ventes</span>
+                                </div>
+                              </div>
+                            </div>
+                            <div>
+                              <h5 className="text-lg font-semibold text-purple-400 mb-3">🎯 Métriques avancées</h5>
+                              <div className="space-y-2">
+                                <div className="flex items-center gap-2">
+                                  <span className="text-purple-400">📊</span>
+                                  <span className="text-slate-300 text-sm">Taux de réussite des ventes</span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <span className="text-purple-400">⏱️</span>
+                                  <span className="text-slate-300 text-sm">Temps moyen de vente</span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <span className="text-purple-400">📈</span>
+                                  <span className="text-slate-300 text-sm">Volume de ventes</span>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Top 10 et graphique */}
+                    <div className="bg-gradient-to-r from-orange-500/20 to-orange-600/20 p-6 rounded-xl border border-orange-500/30">
+                      <div className="flex items-start gap-4">
+                        <div className="text-3xl">🏆</div>
+                        <div>
+                          <h4 className="text-xl font-semibold text-white mb-3">Top 10 & Évolution</h4>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                              <h5 className="text-lg font-semibold text-orange-400 mb-3">🥇 Top 10 des items</h5>
+                              <p className="text-slate-300 text-sm mb-3">
+                                Les items les plus rentables par période, avec gains et investissements détaillés.
+                              </p>
+                              <div className="space-y-1">
+                                <div className="flex items-center gap-2">
+                                  <span className="text-orange-400">✓</span>
+                                  <span className="text-slate-300 text-sm">Classement par gain total</span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <span className="text-orange-400">✓</span>
+                                  <span className="text-slate-300 text-sm">Images et noms des items</span>
+                                </div>
+                              </div>
+                            </div>
+                            <div>
+                              <h5 className="text-lg font-semibold text-orange-400 mb-3">📈 Graphique d'évolution</h5>
+                              <p className="text-slate-300 text-sm mb-3">
+                                Évolution des gains quotidiens sur les 30 derniers jours.
+                              </p>
+                              <div className="space-y-1">
+                                <div className="flex items-center gap-2">
+                                  <span className="text-orange-400">✓</span>
+                                  <span className="text-slate-300 text-sm">Données calculées en temps réel</span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <span className="text-orange-400">✓</span>
+                                  <span className="text-slate-300 text-sm">Fallback automatique si pas de stats</span>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Filtrage par serveur */}
+                    <div className="bg-gradient-to-r from-cyan-500/20 to-cyan-600/20 p-6 rounded-xl border border-cyan-500/30">
+                      <div className="flex items-start gap-4">
+                        <div className="text-3xl">🌐</div>
+                        <div>
+                          <h4 className="text-xl font-semibold text-white mb-3">Filtrage par serveur</h4>
+                          <p className="text-slate-300 mb-4">
+                            Toutes les données de vente sont séparées par serveur pour une gestion précise.
+                          </p>
+                          <div className="space-y-2">
+                            <div className="flex items-center gap-2">
+                              <span className="text-cyan-400">✓</span>
+                              <span className="text-slate-300 text-sm">Données isolées par serveur</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-cyan-400">✓</span>
+                              <span className="text-slate-300 text-sm">Changement automatique des stats</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {activeSection === 'colors' && (
                 <div className="space-y-6">

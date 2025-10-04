@@ -20,6 +20,8 @@ export default function ItemCard({
   isSelectedForComparison,
   onToggleFavorite,
   isFavorite = false,
+  onPutOnSale,
+  user,
   serverId, // Ajouter serverId pour les warnings
   refreshTrigger = 0, // Nouveau prop pour déclencher le rechargement
 }) {
@@ -207,7 +209,8 @@ export default function ItemCard({
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-start gap-2">
+          {/* Colonne 1 : Favoris */}
           <button
             onClick={() => onToggleFavorite?.(it.key)}
             className={`p-1 rounded-lg transition-colors ${
@@ -219,7 +222,9 @@ export default function ItemCard({
           >
             {isFavorite ? '★' : '☆'}
           </button>
-          <label className="mt-1 relative inline-flex items-center cursor-pointer select-none h-6">
+          
+          {/* Colonne 2 : Comparer */}
+          <label className="relative inline-flex items-center cursor-pointer select-none h-6">
             <input
               type="checkbox"
               className="sr-only peer"
@@ -230,12 +235,27 @@ export default function ItemCard({
             <span className="absolute top-1/2 left-[4px] -translate-y-1/2 h-5 w-5 rounded-full bg-[#0b0f14] border border-white/10 transition-transform peer-checked:translate-x-4"></span>
             <span className="ml-2 text-xs text-slate-300">Comparer</span>
           </label>
-          <button
-            onClick={() => onRemove?.(it.key)}
-            className="shrink-0 rounded-xl bg-rose-900/30 text-rose-300 hover:bg-rose-900/50 px-3 py-2 text-sm"
-          >
-            Retirer
-          </button>
+          
+          {/* Colonne 3 : Retirer + Vendre */}
+          <div className="flex flex-col gap-2">
+            <button
+              onClick={() => onRemove?.(it.key)}
+              className="rounded-xl bg-rose-900/30 text-rose-300 hover:bg-rose-900/50 px-3 py-2 text-sm"
+            >
+              Retirer
+            </button>
+            
+            {/* Vendre en dessous de Retirer */}
+            {user && (
+              <button
+                onClick={() => onPutOnSale?.(it)}
+                className="rounded-xl bg-emerald-900/30 text-emerald-300 hover:bg-emerald-900/50 px-3 py-2 text-sm"
+                title="Mettre en vente"
+              >
+                Vendre
+              </button>
+            )}
+          </div>
         </div>
       </div>
 

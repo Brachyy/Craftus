@@ -27,9 +27,13 @@ export default function MainMenu({
   onShareByLink,
   onExportJSON,
   onImportJSON,
+  
+  // Sales system
+  onPutAllItemsOnSale,
+  onOpenSalesModal,
+  onOpenDashboardModal,
+  saleLoading,
 }) {
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-
   const servers = [
     "Brial", "Dakal", "Draconiros", "Hell Mina", "Imagiro", 
     "Kourial", "Mikhal", "Orukam", "Rafal", "Salar", 
@@ -86,43 +90,29 @@ export default function MainMenu({
                     ? "bg-blue-600 hover:bg-blue-500 text-white shadow-lg hover:shadow-blue-500/25" 
                     : "bg-blue-900/40 text-blue-300/50 cursor-not-allowed"
                 }`}
-                title="Comparer les prix de vente des objets sélectionnés"
+                title={selectedForComparison.size >= 2 ? "Comparer les items sélectionnés" : "Sélectionnez au moins 2 items"}
               >
                 📊 Comparer ({selectedForComparison.size})
               </button>
               
               <button
-                onClick={() => {
-                  if (!user) {
-                    onShowAuthRequired();
-                    return;
-                  }
-                  onOpenFavorites();
-                }}
-                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 ${
+                onClick={onOpenFavorites}
+                disabled={favoritesLoading}
+                className={`px-3 py-1.5 rounded-lg text-sm transition-all duration-200 ${
                   user 
                     ? "bg-yellow-600 hover:bg-yellow-500 text-white shadow-lg hover:shadow-yellow-500/25" 
                     : "bg-yellow-900/40 text-yellow-300/50 hover:bg-yellow-800/60"
                 }`}
                 title={user ? "Gérer mes favoris" : "Connexion requise pour les favoris"}
-                disabled={favoritesLoading}
               >
                 {favoritesLoading ? "⏳..." : `⭐ Favoris (${favoritesCount})`}
               </button>
             </div>
           </div>
 
-          {/* Actions principales */}
+          {/* Sessions */}
           <div className="menu-group flex items-center justify-center bg-slate-800/50 rounded-xl px-4 py-4 border border-slate-700 h-20">
             <div className="flex items-center gap-3">
-              <button
-                onClick={onClearAll}
-                className="px-3 py-1.5 rounded-lg bg-red-600/20 text-red-300 border border-red-500/30 hover:bg-red-600/30 hover:border-red-500/50 text-sm transition-all duration-200"
-                title="Vider tous les objets de l'accueil"
-              >
-                🗑️ Vider
-              </button>
-              
               <button
                 onClick={() => {
                   if (!user) {
@@ -177,7 +167,7 @@ export default function MainMenu({
                     ? "bg-purple-600/20 text-purple-300 border border-purple-500/30 hover:bg-purple-600/30 hover:border-purple-500/50" 
                     : "bg-purple-900/40 text-purple-300/50 hover:bg-purple-800/60"
                 }`}
-                title={user ? "Partager la session via un lien" : "Connexion requise pour partager"}
+                title={user ? "Partager la session par lien" : "Connexion requise pour partager"}
               >
                 🔗 Partager
               </button>
@@ -192,12 +182,12 @@ export default function MainMenu({
                 }}
                 className={`px-3 py-1.5 rounded-lg text-sm transition-all duration-200 ${
                   user 
-                    ? "bg-indigo-600/20 text-indigo-300 border border-indigo-500/30 hover:bg-indigo-600/30 hover:border-indigo-500/50" 
-                    : "bg-indigo-900/40 text-indigo-300/50 hover:bg-indigo-800/60"
+                    ? "bg-orange-600/20 text-orange-300 border border-orange-500/30 hover:bg-orange-600/30 hover:border-orange-500/50" 
+                    : "bg-orange-900/40 text-orange-300/50 hover:bg-orange-800/60"
                 }`}
                 title={user ? "Exporter la session en JSON" : "Connexion requise pour exporter"}
               >
-                📄 Export
+                📤 Export
               </button>
               
               <button
@@ -218,6 +208,68 @@ export default function MainMenu({
                 📥 Import
               </button>
             </div>
+          </div>
+
+        </div>
+
+        {/* Section système de vente - Pleine largeur */}
+        <div className="menu-group flex items-center justify-center bg-gradient-to-r from-emerald-900/30 to-blue-900/30 rounded-xl px-4 py-4 border border-emerald-500/20 h-20">
+          <div className="flex items-center gap-3">
+            
+            <button
+              onClick={() => {
+                if (!user) {
+                  onShowAuthRequired();
+                  return;
+                }
+                onPutAllItemsOnSale();
+              }}
+              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 ${
+                user && itemsCount > 0
+                  ? "bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg hover:shadow-emerald-500/25" 
+                  : "bg-emerald-900/40 text-emerald-300/50 hover:bg-emerald-800/60"
+              }`}
+              title={user ? "Mettre tous les items en vente" : "Connexion requise"}
+              disabled={!user || itemsCount === 0 || saleLoading}
+            >
+              {saleLoading ? "⏳..." : `Vendre tout (${itemsCount})`}
+            </button>
+            
+            <button
+              onClick={() => {
+                if (!user) {
+                  onShowAuthRequired();
+                  return;
+                }
+                onOpenSalesModal();
+              }}
+              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 ${
+                user 
+                  ? "bg-blue-600 hover:bg-blue-500 text-white shadow-lg hover:shadow-blue-500/25" 
+                  : "bg-blue-900/40 text-blue-300/50 hover:bg-blue-800/60"
+              }`}
+              title={user ? "Voir mes items en vente" : "Connexion requise"}
+            >
+              📦 Mes ventes
+            </button>
+            
+            <button
+              onClick={() => {
+                if (!user) {
+                  onShowAuthRequired();
+                  return;
+                }
+                onOpenDashboardModal();
+              }}
+              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 ${
+                user 
+                  ? "bg-purple-600 hover:bg-purple-500 text-white shadow-lg hover:shadow-purple-500/25" 
+                  : "bg-purple-900/40 text-purple-300/50 hover:bg-purple-800/60"
+              }`}
+              title={user ? "Voir mes statistiques de vente" : "Connexion requise"}
+            >
+              📊 Dashboard
+            </button>
           </div>
         </div>
       </div>
@@ -241,8 +293,24 @@ export default function MainMenu({
               ))}
             </select>
           </div>
-          
-          {/* Actions principales */}
+
+          {/* Bouton refresh mobile */}
+          <button
+            onClick={onRefreshPrices}
+            disabled={!itemsCount}
+            className={`px-2 py-1 rounded-lg text-xs transition-all duration-200 ${
+              itemsCount 
+                ? "bg-slate-600 hover:bg-slate-500 text-white" 
+                : "bg-slate-800/50 text-slate-500 cursor-not-allowed"
+            }`}
+            title="Rafraîchir les prix"
+          >
+            🔄
+          </button>
+        </div>
+
+        {/* Boutons d'actions mobiles */}
+        <div className="grid grid-cols-2 gap-2 mb-3">
           <button
             onClick={() => {
               if (!user) {
@@ -251,16 +319,16 @@ export default function MainMenu({
               }
               onSave();
             }}
-            className={`px-3 py-2 rounded-lg text-sm font-medium ${
+            className={`mobile-menu-item px-3 py-2 rounded-lg text-sm menu-button ${
               user 
-                ? "bg-emerald-600 hover:bg-emerald-500 text-white" 
-                : "bg-emerald-900/40 text-emerald-300/50 hover:bg-emerald-800/60"
+                ? "bg-emerald-600/20 text-emerald-300 border border-emerald-500/30" 
+                : "bg-emerald-900/40 text-emerald-300/50"
             }`}
             title={user ? "Enregistrer" : "Connexion requise"}
           >
-            💾
+            💾 Enregistrer
           </button>
-          
+
           <button
             onClick={() => {
               if (!user) {
@@ -269,145 +337,117 @@ export default function MainMenu({
               }
               onLoad();
             }}
-            className={`px-3 py-2 rounded-lg text-sm ${
+            className={`mobile-menu-item px-3 py-2 rounded-lg text-sm menu-button ${
               user 
-                ? "bg-blue-600 hover:bg-blue-500 text-white" 
-                : "bg-blue-900/40 text-blue-300/50 hover:bg-blue-800/60"
+                ? "bg-blue-600/20 text-blue-300 border border-blue-500/30" 
+                : "bg-blue-900/40 text-blue-300/50"
             }`}
             title={user ? "Charger" : "Connexion requise"}
           >
-            📂
+            📂 Charger
           </button>
-          
+
           <button
-            onClick={() => {
-              if (!user) {
-                onShowAuthRequired();
-                return;
-              }
-              onOpenFavorites();
-            }}
-            className={`px-3 py-2 rounded-lg text-sm transition-all duration-200 ${
-              user 
-                ? "bg-yellow-600 hover:bg-yellow-500 text-white" 
-                : "bg-yellow-900/40 text-yellow-300/50 hover:bg-yellow-800/60"
+            onClick={onOpenComparison}
+            disabled={selectedForComparison.size < 2}
+            className={`mobile-menu-item px-3 py-2 rounded-lg text-sm menu-button ${
+              selectedForComparison.size >= 2 
+                ? "bg-blue-600/20 text-blue-300 border border-blue-500/30" 
+                : "bg-blue-900/40 text-blue-300/50"
             }`}
+            title="Comparer"
+          >
+            📊 Comparer ({selectedForComparison.size})
+          </button>
+
+          <button
+            onClick={onOpenFavorites}
             disabled={favoritesLoading}
+            className={`mobile-menu-item px-3 py-2 rounded-lg text-sm menu-button ${
+              user 
+                ? "bg-yellow-600/20 text-yellow-300 border border-yellow-500/30" 
+                : "bg-yellow-900/40 text-yellow-300/50"
+            }`}
             title={user ? "Favoris" : "Connexion requise"}
           >
-            {favoritesLoading ? "⏳" : `⭐ (${favoritesCount})`}
-          </button>
-          
-          {/* Menu hamburger */}
-          <button
-            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            className="px-3 py-2 rounded-lg bg-slate-600 hover:bg-slate-500 text-white text-sm"
-          >
-            {isMobileMenuOpen ? "✕" : "☰"}
+            {favoritesLoading ? "⏳..." : `⭐ Favoris (${favoritesCount})`}
           </button>
         </div>
 
-        {/* Menu déroulant mobile */}
-        {isMobileMenuOpen && (
-          <div className="mobile-menu bg-slate-800/90 rounded-xl border border-slate-700 p-4 mb-3 backdrop-blur-sm">
-            <div className="grid grid-cols-2 gap-3">
+        {/* Section ventes mobile */}
+        {user && (
+          <div className="bg-gradient-to-r from-emerald-900/30 to-blue-900/30 rounded-lg p-3 border border-emerald-500/20 mb-3">
+            <div className="grid grid-cols-3 gap-2">
+              <button
+                onClick={onPutAllItemsOnSale}
+                disabled={itemsCount === 0 || saleLoading}
+                className={`px-2 py-1 rounded text-xs font-medium transition-all duration-200 ${
+                  itemsCount > 0
+                    ? "bg-emerald-600 hover:bg-emerald-500 text-white" 
+                    : "bg-emerald-900/40 text-emerald-300/50"
+                }`}
+                title="Vendre tout"
+              >
+                {saleLoading ? "⏳" : `Vendre (${itemsCount})`}
+              </button>
               
-              {/* Actions */}
-              <div className="space-y-2">
-                <div className="text-xs text-slate-400 font-medium mb-2">Actions</div>
-                <button
-                  onClick={onClearAll}
-                  className="mobile-menu-item w-full px-3 py-2 rounded-lg bg-red-600/20 text-red-300 border border-red-500/30 text-sm menu-button"
-                >
-                  🗑️ Vider
-                </button>
-              </div>
-
-              {/* Données */}
-              <div className="space-y-2">
-                <div className="text-xs text-slate-400 font-medium mb-2">Données</div>
-                <button
-                  onClick={onRefreshPrices}
-                  disabled={!itemsCount}
-                  className={`mobile-menu-item w-full px-3 py-2 rounded-lg text-sm menu-button ${
-                    itemsCount 
-                      ? "bg-slate-600 text-white" 
-                      : "bg-slate-800/50 text-slate-500"
-                  }`}
-                >
-                  🔄 Rafraîchir
-                </button>
-                <button
-                  onClick={onOpenComparison}
-                  disabled={selectedForComparison.size < 2}
-                  className={`mobile-menu-item w-full px-3 py-2 rounded-lg text-sm menu-button ${
-                    selectedForComparison.size >= 2 
-                      ? "bg-blue-600 text-white" 
-                      : "bg-blue-900/40 text-blue-300/50"
-                  }`}
-                >
-                  📊 Comparer ({selectedForComparison.size})
-                </button>
-              </div>
-
-              {/* Export */}
-              <div className="space-y-2 col-span-2">
-                <div className="text-xs text-slate-400 font-medium mb-2">Export/Partage</div>
-                <div className="grid grid-cols-3 gap-2">
-                  <button
-                    onClick={() => {
-                      if (!user) {
-                        onShowAuthRequired();
-                        return;
-                      }
-                      onShareByLink();
-                    }}
-                    className={`mobile-menu-item px-3 py-2 rounded-lg text-sm menu-button ${
-                      user 
-                        ? "bg-purple-600/20 text-purple-300 border border-purple-500/30" 
-                        : "bg-purple-900/40 text-purple-300/50"
-                    }`}
-                    title={user ? "Partager" : "Connexion requise"}
-                  >
-                    🔗 Partager
-                  </button>
-                  <button
-                    onClick={() => {
-                      if (!user) {
-                        onShowAuthRequired();
-                        return;
-                      }
-                      onExportJSON();
-                    }}
-                    className={`mobile-menu-item px-3 py-2 rounded-lg text-sm menu-button ${
-                      user 
-                        ? "bg-indigo-600/20 text-indigo-300 border border-indigo-500/30" 
-                        : "bg-indigo-900/40 text-indigo-300/50"
-                    }`}
-                    title={user ? "Export" : "Connexion requise"}
-                  >
-                    📄 Export
-                  </button>
-                  <button
-                    onClick={() => {
-                      if (!user) {
-                        onShowAuthRequired();
-                        return;
-                      }
-                      onImportJSON();
-                    }}
-                    className={`mobile-menu-item px-3 py-2 rounded-lg text-sm menu-button ${
-                      user 
-                        ? "bg-indigo-600/20 text-indigo-300 border border-indigo-500/30" 
-                        : "bg-indigo-900/40 text-indigo-300/50"
-                    }`}
-                    title={user ? "Import" : "Connexion requise"}
-                  >
-                    📥 Import
-                  </button>
-                </div>
-              </div>
+              <button
+                onClick={onOpenSalesModal}
+                className="px-2 py-1 rounded text-xs font-medium bg-blue-600 hover:bg-blue-500 text-white transition-all duration-200"
+                title="Mes ventes"
+              >
+                📦 Ventes
+              </button>
+              
+              <button
+                onClick={onOpenDashboardModal}
+                className="px-2 py-1 rounded text-xs font-medium bg-purple-600 hover:bg-purple-500 text-white transition-all duration-200"
+                title="Dashboard"
+              >
+                📊 Stats
+              </button>
             </div>
+          </div>
+        )}
+
+        {/* Boutons export/import mobile */}
+        {user && (
+          <div className="grid grid-cols-3 gap-2">
+            <button
+              onClick={onShareByLink}
+              className={`mobile-menu-item px-3 py-2 rounded-lg text-sm menu-button ${
+                user 
+                  ? "bg-purple-600/20 text-purple-300 border border-purple-500/30" 
+                  : "bg-purple-900/40 text-purple-300/50"
+              }`}
+              title={user ? "Partager" : "Connexion requise"}
+            >
+              🔗 Partager
+            </button>
+
+            <button
+              onClick={onExportJSON}
+              className={`mobile-menu-item px-3 py-2 rounded-lg text-sm menu-button ${
+                user 
+                  ? "bg-orange-600/20 text-orange-300 border border-orange-500/30" 
+                  : "bg-orange-900/40 text-orange-300/50"
+              }`}
+              title={user ? "Export" : "Connexion requise"}
+            >
+              📤 Export
+            </button>
+
+            <button
+              onClick={onImportJSON}
+              className={`mobile-menu-item px-3 py-2 rounded-lg text-sm menu-button ${
+                user 
+                  ? "bg-indigo-600/20 text-indigo-300 border border-indigo-500/30" 
+                  : "bg-indigo-900/40 text-indigo-300/50"
+              }`}
+              title={user ? "Import" : "Connexion requise"}
+            >
+              📥 Import
+            </button>
           </div>
         )}
       </div>

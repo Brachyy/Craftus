@@ -96,5 +96,46 @@ service cloud.firestore {
                        request.resource.data.lastResetDate is timestamp &&
                        request.resource.data.lastUpdated is timestamp;
     }
+
+    // Collection des ventes utilisateur
+    match /sales/{saleId} {
+      allow read, write: if request.auth != null && request.auth.uid == resource.data.userId;
+      allow create: if request.auth != null && 
+                       request.auth.uid == request.resource.data.userId &&
+                       request.resource.data.userId is string &&
+                       request.resource.data.serverId is string &&
+                       request.resource.data.itemId is int &&
+                       request.resource.data.itemName is string &&
+                       request.resource.data.itemImage is string &&
+                       request.resource.data.sellPrice is number &&
+                       request.resource.data.investment is number &&
+                       request.resource.data.gain is number &&
+                       request.resource.data.craftCount is number &&
+                       request.resource.data.timestamp is timestamp &&
+                       request.resource.data.sold is bool;
+    }
+
+    // Collection des statistiques dashboard
+    match /dashboard_stats/{statsId} {
+      // Permettre la lecture si l'utilisateur est connecté et que le document appartient à l'utilisateur
+      allow read: if request.auth != null && 
+                     (resource == null || request.auth.uid == resource.data.userId);
+      
+      // Permettre l'écriture si l'utilisateur est connecté et que le document appartient à l'utilisateur
+      allow write: if request.auth != null && 
+                      (resource == null || request.auth.uid == resource.data.userId);
+      
+      // Permettre la création avec validation des données
+      allow create: if request.auth != null && 
+                       request.auth.uid == request.resource.data.userId &&
+                       request.resource.data.userId is string &&
+                       request.resource.data.period is string &&
+                       request.resource.data.periodStart is timestamp &&
+                       request.resource.data.totalGains is number &&
+                       request.resource.data.totalInvestment is number &&
+                       request.resource.data.salesCount is number &&
+                       request.resource.data.lastUpdated is timestamp &&
+                       request.resource.data.topItems is list;
+    }
   }
 }

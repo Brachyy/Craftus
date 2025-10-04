@@ -11,6 +11,12 @@ import AdBlockDetector from "./components/AdBlockDetector";
 import AdBlockInfo from "./components/AdBlockInfo";
 import { loadAnalyticsOptimized, isAnalyticsAvailable, trackEventOptimized, setUserPropertiesOptimized } from "./lib/analyticsOptimized";
 
+// Sales system
+import SalesModal from "./components/SalesModal";
+import DashboardModal from "./components/DashboardModal";
+import NotificationToast from "./components/NotificationToast";
+import { addItemToSales, addItemsToSales } from "./lib/sales";
+
 import { itemAnkamaId, itemImage, itemLevel, itemName, isEquipment } from "./lib/utils";
 import {
   apiGET,
@@ -167,6 +173,16 @@ export default function App() {
   const [rankUpdateTrigger, setRankUpdateTrigger] = useState(0);
   const [showRankCongratulation, setShowRankCongratulation] = useState(false);
   const [congratulationRankName, setCongratulationRankName] = useState('');
+  const [showSalesModal, setShowSalesModal] = useState(false);
+  const [showDashboardModal, setShowDashboardModal] = useState(false);
+  const [saleLoading, setSaleLoading] = useState(false);
+  
+  // État pour la notification toast
+  const [notification, setNotification] = useState({
+    isVisible: false,
+    itemName: '',
+    type: 'success'
+  });
 
   // Filtres visibles
   const [equipmentOnly, setEquipmentOnly] = useState(false);
@@ -443,21 +459,7 @@ export default function App() {
     const id = itemAnkamaId(raw);
     if (!id) return alert("ID Ankama introuvable pour cet objet.");
 
-    // Si l'item existe déjà dans la liste, on incrémente simplement la quantité
-    const already = items.find((x) => x.ankamaId === id);
-    if (already) {
-      setItems((prev) =>
-        prev.map((it) =>
-          it.ankamaId === id
-            ? { ...it, craftCount: Math.max(1, Math.floor(Number(it.craftCount || 1)) + 1) }
-            : it
-        )
-      );
-      setQuery("");
-      setSuggestions([]);
-      addToSearchHistory(raw.displayName || raw.name?.fr || "");
-      return;
-    }
+    // Permettre les doublons - ne plus vérifier si l'item existe déjà
 
     const entries = await fetchRecipeEntriesForItem(id, setDebugUrl, setDebugErr);
     if (!entries.length) return alert("Recette introuvable (objet non craftable ?).");
@@ -731,27 +733,80 @@ export default function App() {
     );
   };
 
-  // Commit investissement runes vers BDD communautaire
+  // Commit investissement runes (ne fait rien car les prix des runes ne sont pas sauvegardés)
   const commitRuneInvestment = async (itemKey, previousValue) => {
     // Ne pas enregistrer les prix des runes en base de données
     return;
   };
 
-  // Mises à jour inputs
+  // Fonctions pour le système de vente
+  const handlePutItemOnSale = async (item) => {
+    if (!user) {
+      alert('Vous devez être connecté pour mettre des items en vente');
+      return;
+    }
+
+    setSaleLoading(true);
+    try {
+      await addItemToSales(user.uid, item, serverId);
+      
+      // Afficher la notification toast
+      setNotification({
+        isVisible: true,
+        itemName: item.displayName,
+        type: 'success'
+      });
+    } catch (error) {
+      console.error('Erreur lors de la mise en vente:', error);
+      setNotification({
+        isVisible: true,
+        itemName: 'Erreur lors de la mise en vente',
+        type: 'error'
+      });
+    } finally {
+      setSaleLoading(false);
+    }
+  };
+
+  const handlePutAllItemsOnSale = async () => {
+    if (!user) {
+      alert('Vous devez être connecté pour mettre des items en vente');
+      return;
+    }
+
+    if (items.length === 0) {
+      alert('Aucun item à mettre en vente');
+      return;
+    }
+
+    setSaleLoading(true);
+    try {
+      await addItemsToSales(user.uid, items, serverId);
+      
+      // Afficher la notification toast
+      setNotification({
+        isVisible: true,
+        itemName: `${items.length} items mis en vente`,
+        type: 'success'
+      });
+    } catch (error) {
+      console.error('Erreur lors de la mise en vente:', error);
+      setNotification({
+        isVisible: true,
+        itemName: 'Erreur lors de la mise en vente',
+        type: 'error'
+      });
+    } finally {
+      setSaleLoading(false);
+    }
+  };
+
+  // Mises à jour inputs avec propagation automatique
   const updateIngredientPrice = async (itemKey, ingId, price) => {
     const val = price === "" || price == null ? undefined : Number(price);
-    setItems((prev) =>
-      prev.map((it) =>
-        it.key !== itemKey
-          ? it
-          : {
-              ...it,
-              ingredients: it.ingredients.map((ing) =>
-                ing.ankamaId === ingId ? { ...ing, unitPrice: val } : ing
-              ),
-            }
-      )
-    );
+    
+    // Propagation automatique vers tous les items qui utilisent le même ingrédient
+    propagateIngredientPrice(ingId, val);
 
     // Incrémenter les participations si l'utilisateur est connecté et renseigne un prix valide
     if (user && userName && val && val > 0) {
@@ -927,6 +982,22 @@ export default function App() {
       return newHistory;
     });
   };
+
+  // Propagation des prix d'ingrédients vers tous les items qui utilisent le même ingrédient
+  function propagateIngredientPrice(ingId, newPrice) {
+    setItems(prev => prev.map(item => {
+      const ingredient = item.ingredients.find(ing => ing.ankamaId === ingId);
+      if (ingredient) {
+        return {
+          ...item,
+          ingredients: item.ingredients.map(ing => 
+            ing.ankamaId === ingId ? { ...ing, unitPrice: newPrice } : ing
+          )
+        };
+      }
+      return item;
+    }));
+  }
 
   // Commit vers BDD communautaire au blur
   async function commitIngredientPrice(itemKey, ingId, previousValue) {
@@ -1259,6 +1330,12 @@ export default function App() {
           onShareByLink={shareByLink}
           onExportJSON={exportJSON}
           onImportJSON={importJSON}
+          
+          // Sales system
+          onPutAllItemsOnSale={handlePutAllItemsOnSale}
+          onOpenSalesModal={() => setShowSalesModal(true)}
+          onOpenDashboardModal={() => setShowDashboardModal(true)}
+          saleLoading={saleLoading}
         />
 
 
@@ -1410,6 +1487,8 @@ export default function App() {
               isSelectedForComparison={selectedForComparison.has(it.key)}
               onToggleFavorite={toggleFavorite}
               isFavorite={favorites.has(it.ankamaId)}
+              onPutOnSale={handlePutItemOnSale}
+              user={user}
               serverId={serverId}
               refreshTrigger={refreshTrigger}
               taxRate={TAX_RATE}
@@ -1520,6 +1599,34 @@ export default function App() {
         }}
       />
       
+      {/* Modales du système de vente */}
+      <SalesModal
+        isOpen={showSalesModal}
+        onClose={() => setShowSalesModal(false)}
+        userId={user?.uid}
+        serverId={serverId}
+      />
+      
+      <DashboardModal
+        isOpen={showDashboardModal}
+        onClose={() => setShowDashboardModal(false)}
+        userId={user?.uid}
+        serverId={serverId}
+      />
+
+      {/* Notification Toast */}
+      <NotificationToast
+        isVisible={notification.isVisible}
+        onClose={() => {
+          // Utiliser setTimeout pour éviter les mises à jour pendant le rendu
+          setTimeout(() => {
+            setNotification(prev => ({ ...prev, isVisible: false }));
+          }, 0);
+        }}
+        itemName={notification.itemName}
+        type={notification.type}
+      />
+
       {/* Footer */}
       <Footer />
       
