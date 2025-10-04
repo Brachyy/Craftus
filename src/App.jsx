@@ -72,9 +72,9 @@ import { getUserName, setUserName } from "./lib/userNames";
 import { saveUserProfile } from "./lib/userProfiles";
 import { getUserRankData, updateUserRank } from "./lib/userRanks";
 
-// Logos
-import craftusLogo from "./assets/craftus.png";
-import craftusLogoNew from "./assets/craftus_logo.png";
+// Logos - utilisation des chemins publics
+const craftusLogo = "/assets/craftus.png";
+const craftusLogoNew = "/assets/craftus_logo.png";
 
 const TAX_RATE = 0.02;
 

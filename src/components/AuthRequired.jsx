@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { colors } from '../theme/colors';
-import craftusLogo from '../assets/craftus.png';
-import craftusLogoNew from '../assets/craftus_logo.png';
-import craftus1 from '../assets/craftus1.png';
-import craftus2 from '../assets/craftus2.png';
-import craftus3 from '../assets/craftus3.png';
+// Logos - utilisation des chemins publics
+const craftusLogo = "/assets/craftus.png";
+const craftusLogoNew = "/assets/craftus_logo.png";
+const craftus1 = "/assets/craftus1.png";
+const craftus2 = "/assets/craftus2.png";
+const craftus3 = "/assets/craftus3.png";
 import CGUModal from './CGUModal';
 
 const AuthRequired = ({ onSignIn, onGoBack }) => {

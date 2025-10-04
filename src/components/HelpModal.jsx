@@ -796,7 +796,7 @@ function HelpModal({ isOpen, onClose }) {
                       <div className="space-y-3 text-sm">
                         <div className="flex items-center gap-3">
                           <img 
-                            src="/src/assets/ranks/boufton.png" 
+                            src="/assets/ranks/boufton.png" 
                             alt="Boufton"
                             className="w-6 h-6 object-contain"
                             onError={(e) => {
@@ -815,7 +815,7 @@ function HelpModal({ isOpen, onClose }) {
                         
                         <div className="flex items-center gap-3">
                           <img 
-                            src="/src/assets/ranks/aventurier_amakna.png" 
+                            src="/assets/ranks/aventurier_amakna.png" 
                             alt="Aventurier d'Astrub"
                             className="w-6 h-6 object-contain"
                             onError={(e) => {
@@ -834,7 +834,7 @@ function HelpModal({ isOpen, onClose }) {
                         
                         <div className="flex items-center gap-3">
                           <img 
-                            src="/src/assets/ranks/apprenti_otomai.png" 
+                            src="/assets/ranks/apprenti_otomai.png" 
                             alt="Disciple d'Otomaï"
                             className="w-6 h-6 object-contain"
                             onError={(e) => {
@@ -853,7 +853,7 @@ function HelpModal({ isOpen, onClose }) {
                         
                         <div className="flex items-center gap-3">
                           <img 
-                            src="/src/assets/ranks/chasseur_dofus.png" 
+                            src="/assets/ranks/chasseur_dofus.png" 
                             alt="Chasseur de Dofus"
                             className="w-6 h-6 object-contain"
                             onError={(e) => {
@@ -872,7 +872,7 @@ function HelpModal({ isOpen, onClose }) {
                         
                         <div className="flex items-center gap-3">
                           <img 
-                            src="/src/assets/ranks/protecteur_almanax.png" 
+                            src="/assets/ranks/protecteur_almanax.png" 
                             alt="Protecteur des Mois"
                             className="w-6 h-6 object-contain"
                             onError={(e) => {
@@ -891,7 +891,7 @@ function HelpModal({ isOpen, onClose }) {
                         
                         <div className="flex items-center gap-3">
                           <img 
-                            src="/src/assets/ranks/champion_kolizeum.png" 
+                            src="/assets/ranks/champion_kolizeum.png" 
                             alt="Champion du Kolizéum"
                             className="w-6 h-6 object-contain"
                             onError={(e) => {
@@ -910,7 +910,7 @@ function HelpModal({ isOpen, onClose }) {
                         
                         <div className="flex items-center gap-3">
                           <img 
-                            src="/src/assets/ranks/hero_bonta⁄brakmar.png" 
+                            src="/assets/ranks/hero_bonta⁄brakmar.png" 
                             alt="Héros de Bonta/Brâkmar"
                             className="w-6 h-6 object-contain"
                             onError={(e) => {
@@ -929,7 +929,7 @@ function HelpModal({ isOpen, onClose }) {
                         
                         <div className="flex items-center gap-3">
                           <img 
-                            src="/src/assets/ranks/gardien_krosmoz.png" 
+                            src="/assets/ranks/gardien_krosmoz.png" 
                             alt="Gardien du Krosmoz"
                             className="w-6 h-6 object-contain"
                             onError={(e) => {
@@ -967,7 +967,7 @@ function HelpModal({ isOpen, onClose }) {
                             <span className="text-yellow-400 font-medium">[Votre nom]</span>
                             <span className="text-white">le</span>
                             <img 
-                              src="/src/assets/ranks/champion_kolizeum.png" 
+                              src="/assets/ranks/champion_kolizeum.png" 
                               alt="Champion du Kolizéum"
                               className="w-5 h-5 object-contain"
                               onError={(e) => {
@@ -1017,7 +1017,7 @@ function HelpModal({ isOpen, onClose }) {
                               }}
                             >
                               <img 
-                                src="/src/assets/ranks/boufton.png" 
+                                src="/assets/ranks/boufton.png" 
                                 alt="Boufton"
                                 className="w-6 h-6 object-contain"
                                 onError={(e) => {
@@ -1078,7 +1078,7 @@ function HelpModal({ isOpen, onClose }) {
                               }}
                             >
                               <img 
-                                src="/src/assets/ranks/aventurier_amakna.png" 
+                                src="/assets/ranks/aventurier_amakna.png" 
                                 alt="Aventurier d'Astrub"
                                 className="w-6 h-6 object-contain"
                                 onError={(e) => {
@@ -1152,7 +1152,7 @@ function HelpModal({ isOpen, onClose }) {
                               }}
                             >
                               <img 
-                                src="/src/assets/ranks/apprenti_otomai.png" 
+                                src="/assets/ranks/apprenti_otomai.png" 
                                 alt="Disciple d'Otomaï"
                                 className="w-6 h-6 object-contain"
                                 onError={(e) => {
@@ -1224,7 +1224,7 @@ function HelpModal({ isOpen, onClose }) {
                               }}
                             >
                               <img 
-                                src="/src/assets/ranks/chasseur_dofus.png" 
+                                src="/assets/ranks/chasseur_dofus.png" 
                                 alt="Chasseur de Dofus"
                                 className="w-6 h-6 object-contain"
                                 onError={(e) => {
@@ -1300,7 +1300,7 @@ function HelpModal({ isOpen, onClose }) {
                               }}
                             >
                               <img 
-                                src="/src/assets/ranks/protecteur_almanax.png" 
+                                src="/assets/ranks/protecteur_almanax.png" 
                                 alt="Protecteur des Mois"
                                 className="w-6 h-6 object-contain"
                                 onError={(e) => {
@@ -1362,7 +1362,7 @@ function HelpModal({ isOpen, onClose }) {
                               }}
                             >
                               <img 
-                                src="/src/assets/ranks/champion_kolizeum.png" 
+                                src="/assets/ranks/champion_kolizeum.png" 
                                 alt="Champion du Kolizéum"
                                 className="w-6 h-6 object-contain"
                                 onError={(e) => {
@@ -1436,7 +1436,7 @@ function HelpModal({ isOpen, onClose }) {
                               }}
                             >
                               <img 
-                                src="/src/assets/ranks/hero_bonta⁄brakmar.png" 
+                                src="/assets/ranks/hero_bonta⁄brakmar.png" 
                                 alt="Héros de Bonta/Brâkmar"
                                 className="w-6 h-6 object-contain"
                                 onError={(e) => {
@@ -1511,7 +1511,7 @@ function HelpModal({ isOpen, onClose }) {
                               }}
                             >
                               <img 
-                                src="/src/assets/ranks/gardien_krosmoz.png" 
+                                src="/assets/ranks/gardien_krosmoz.png" 
                                 alt="Gardien du Krosmoz"
                                 className="w-6 h-6 object-contain"
                                 onError={(e) => {

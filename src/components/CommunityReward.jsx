@@ -295,7 +295,7 @@ export default function CommunityReward({ user, userName }) {
       'heros': 'hero_bonta⁄brakmar.png',
       'gardien': 'gardien_krosmoz.png'
     };
-    return `/src/assets/ranks/${assetMap[rankId] || 'boufton.png'}`;
+    return `/assets/ranks/${assetMap[rankId] || 'boufton.png'}`;
   };
 
   useEffect(() => {

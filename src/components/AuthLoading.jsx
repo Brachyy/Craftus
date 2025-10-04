@@ -14,7 +14,7 @@ const AuthLoading = () => {
         {/* Logo animé */}
         <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-r from-emerald-500 to-blue-500 rounded-2xl mb-6 shadow-lg animate-pulse">
           <img 
-            src="/src/assets/craftus.png" 
+            src="/assets/craftus.png" 
             alt="Craftus" 
             className="w-10 h-10 rounded-lg"
             onError={(e) => {

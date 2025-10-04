@@ -39,16 +39,16 @@ const RankLogo = ({ userId, participations, className = "w-8 h-8" }) => {
 
   const getRankAssetPath = (rankId) => {
     const rankAssets = {
-      boufton: '/src/assets/ranks/boufton.png',
-      aventurier: '/src/assets/ranks/aventurier_amakna.png',
-      disciple: '/src/assets/ranks/apprenti_otomai.png',
-      chasseur: '/src/assets/ranks/chasseur_dofus.png',
-      protecteur: '/src/assets/ranks/protecteur_almanax.png',
-      champion: '/src/assets/ranks/champion_kolizeum.png',
-      heros: '/src/assets/ranks/hero_bonta⁄brakmar.png',
-      gardien: '/src/assets/ranks/gardien_krosmoz.png',
+      boufton: '/assets/ranks/boufton.png',
+      aventurier: '/assets/ranks/aventurier_amakna.png',
+      disciple: '/assets/ranks/apprenti_otomai.png',
+      chasseur: '/assets/ranks/chasseur_dofus.png',
+      protecteur: '/assets/ranks/protecteur_almanax.png',
+      champion: '/assets/ranks/champion_kolizeum.png',
+      heros: '/assets/ranks/hero_bonta⁄brakmar.png',
+      gardien: '/assets/ranks/gardien_krosmoz.png',
     };
-    return rankAssets[rankId] || '/src/assets/ranks/boufton.png';
+    return rankAssets[rankId] || '/assets/ranks/boufton.png';
   };
 
   if (!userRank) {

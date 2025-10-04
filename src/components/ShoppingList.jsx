@@ -83,7 +83,7 @@ export default function ShoppingList({
       map.set(runeKey, {
         id: runeKey,
         name: "Runes de forgemagie",
-        img: "/src/assets/runes.png", // Image locale des runes
+        img: "/assets/runes.png", // Image locale des runes
         qty: totalRuneQty,
         unitPrice: runeUnitPrice,
         farmed: false,
