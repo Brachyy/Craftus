@@ -5,6 +5,7 @@ export default function SharePromotion({ user, selectedServer, isHelperOpen }) {
   const [showPromotion, setShowPromotion] = useState(false);
   const [showServerReminder, setShowServerReminder] = useState(false);
   const [isReady, setIsReady] = useState(false);
+  const [isShared, setIsShared] = useState(false);
 
   // Initialiser le composant
   useEffect(() => {
@@ -25,9 +26,18 @@ export default function SharePromotion({ user, selectedServer, isHelperOpen }) {
   useEffect(() => {
     // Attendre que le composant soit prêt et que le helper ne soit pas ouvert
     if (isReady && !isHelperOpen) {
-      setShowServerReminder(true);
+      // Vérifier si l'utilisateur connecté a déjà dit "ne plus rappeler"
+      if (user) {
+        const serverReminderDismissed = localStorage.getItem('serverReminderDismissed');
+        if (!serverReminderDismissed) {
+          setShowServerReminder(true);
+        }
+      } else {
+        // Pour les utilisateurs non connectés, toujours afficher
+        setShowServerReminder(true);
+      }
     }
-  }, [isReady, isHelperOpen]);
+  }, [isReady, isHelperOpen, user]);
 
   const handleClosePromotion = () => {
     setShowPromotion(false);
@@ -37,6 +47,13 @@ export default function SharePromotion({ user, selectedServer, isHelperOpen }) {
   const handleCloseServerReminder = () => {
     setShowServerReminder(false);
     // Ne plus sauvegarder, permettre l'affichage à chaque actualisation
+  };
+
+  const handleDontRemindAgain = () => {
+    if (user) {
+      localStorage.setItem('serverReminderDismissed', 'true');
+    }
+    setShowServerReminder(false);
   };
 
   const handleShare = async () => {
@@ -49,15 +66,26 @@ export default function SharePromotion({ user, selectedServer, isHelperOpen }) {
     if (navigator.share) {
       try {
         await navigator.share(shareData);
-        handleClosePromotion();
+        setIsShared(true);
+        setTimeout(() => {
+          handleClosePromotion();
+        }, 2000);
       } catch (err) {
         console.log('Erreur lors du partage:', err);
+        // Fallback : copier le lien
+        navigator.clipboard.writeText(window.location.origin);
+        setIsShared(true);
+        setTimeout(() => {
+          handleClosePromotion();
+        }, 2000);
       }
     } else {
       // Fallback : copier le lien
       navigator.clipboard.writeText(window.location.origin);
-      alert('Lien copié ! Partage-le avec tes amis, ta guilde et ton alliance pour améliorer la fiabilité des prix 🚀');
-      handleClosePromotion();
+      setIsShared(true);
+      setTimeout(() => {
+        handleClosePromotion();
+      }, 2000);
     }
   };
 
@@ -85,9 +113,25 @@ export default function SharePromotion({ user, selectedServer, isHelperOpen }) {
                 <div className="flex gap-2">
                   <button
                     onClick={handleShare}
-                    className="px-3 py-1.5 bg-gradient-to-r from-emerald-600 to-blue-600 text-white text-xs font-medium rounded-lg hover:from-emerald-500 hover:to-blue-500 transition-all duration-200 transform hover:scale-105 shadow-lg flex items-center gap-1"
+                    disabled={isShared}
+                    className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-all duration-200 transform hover:scale-105 shadow-lg flex items-center gap-1 ${
+                      isShared 
+                        ? "bg-green-600 text-white cursor-default" 
+                        : "bg-gradient-to-r from-emerald-600 to-blue-600 text-white hover:from-emerald-500 hover:to-blue-500"
+                    }`}
                   >
-                    📤 Partager
+                    {isShared ? (
+                      <>
+                        <svg className="w-3 h-3 animate-bounce" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
+                        Lien copié !
+                      </>
+                    ) : (
+                      <>
+                        📤 Partager
+                      </>
+                    )}
                   </button>
                   <button
                     onClick={handleClosePromotion}
@@ -139,12 +183,14 @@ export default function SharePromotion({ user, selectedServer, isHelperOpen }) {
                     </svg>
                     Compris
                   </button>
-                  <button
-                    onClick={handleCloseServerReminder}
-                    className="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-300 text-xs font-medium rounded-lg transition-all duration-200"
-                  >
-                    Ignorer
-                  </button>
+                  {user && (
+                    <button
+                      onClick={handleDontRemindAgain}
+                      className="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-300 text-xs font-medium rounded-lg transition-all duration-200"
+                    >
+                      Ne plus rappeler
+                    </button>
+                  )}
                 </div>
               </div>
               <button
