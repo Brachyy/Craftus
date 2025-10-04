@@ -79,14 +79,14 @@ const craftusLogoNew = "/assets/craftus_logo.png";
 const TAX_RATE = 0.02;
 
 // ---- calculs (net = revenu brut - taxe 2%) ----
-  function computeInvestment(it) {
-    const perUnit = (it.ingredients || []).reduce((sum, ing) => {
-      if (ing.farmed) return sum;
-      return sum + (ing.unitPrice ?? 0) * ing.qty;
-    }, 0);
+function computeInvestment(it) {
+  const perUnit = (it.ingredients || []).reduce((sum, ing) => {
+    if (ing.farmed) return sum;
+    return sum + (ing.unitPrice ?? 0) * ing.qty;
+  }, 0);
     const runeInvestment = isEquipment(it) ? Number(it.runeInvestment || 0) : 0;
     return (perUnit + runeInvestment) * (it.craftCount || 1);
-  }
+}
 function computeGrossRevenue(it) {
   return (it.sellPrice ?? 0) * (it.craftCount || 1);
 }
@@ -710,13 +710,13 @@ export default function App() {
     if (!items.length) return;
     
     if (showAlert) {
-      // Utiliser notre alerte intégrée au lieu de window.confirm
-      setAlertData({
-        title: 'Actualiser les prix communautaires',
-        message: 'Cette action va écraser vos prix saisis localement avec les derniers prix communautaires. Continuer ?',
-        type: 'warning'
-      });
-      setShowAlert(true);
+    // Utiliser notre alerte intégrée au lieu de window.confirm
+    setAlertData({
+      title: 'Actualiser les prix communautaires',
+      message: 'Cette action va écraser vos prix saisis localement avec les derniers prix communautaires. Continuer ?',
+      type: 'warning'
+    });
+    setShowAlert(true);
     } else {
       // Exécuter directement sans alerte
       return await executeRefresh();
@@ -1499,14 +1499,14 @@ export default function App() {
         {/* 🛒 Shopping list — entre le fil et le comparatif */}
         {items.length > 0 && (
           <div id="shopping-section" className="mt-6">
-        <ShoppingList
-          items={items}
-          onUpdateIngredientPrice={updateIngredientPrice}
-          onCommitIngredientPrice={commitIngredientPrice}
+            <ShoppingList
+              items={items}
+              onUpdateIngredientPrice={updateIngredientPrice}
+              onCommitIngredientPrice={commitIngredientPrice}
           onUpdateRuneInvestment={updateRuneInvestment}
-          serverId={serverId}
-          refreshTrigger={refreshTrigger}
-        />
+              serverId={serverId}
+              refreshTrigger={refreshTrigger}
+            />
           </div>
         )}
 
@@ -1626,7 +1626,7 @@ export default function App() {
         itemName={notification.itemName}
         type={notification.type}
       />
-
+      
       {/* Footer */}
       <Footer />
       
