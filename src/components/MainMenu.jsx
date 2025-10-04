@@ -44,171 +44,192 @@ export default function MainMenu({
     <div className="mb-4">
       {/* Menu Desktop */}
       <div className="hidden md:block">
-        <div className="grid grid-cols-2 gap-4 mb-3">
-          {/* Serveur - Section dédiée */}
-          <div className="menu-group flex items-center justify-center bg-gradient-to-r from-emerald-900/50 to-blue-900/50 rounded-xl px-4 py-4 border-2 border-emerald-500/50 h-20">
-            <div className="flex items-center gap-3">
-              <span className="text-emerald-400 text-lg">🌐</span>
-              <span className="text-emerald-300 text-sm font-medium">Serveur :</span>
-              <select
-                value={serverId}
-                onChange={(e) => setServerId(e.target.value)}
-                className={`px-4 py-2 rounded-lg bg-gradient-to-r from-emerald-800/50 to-blue-800/50 text-white border-2 border-emerald-500/50 text-sm font-medium focus:ring-2 focus:ring-emerald-400 focus:border-emerald-400 transition-all duration-200 hover:border-emerald-400`}
-                title="⚠️ IMPORTANT : Choisissez votre serveur ! Les prix varient énormément entre serveurs"
-              >
-                {servers.map(server => (
-                  <option key={server} value={server} className="bg-slate-800 text-white">{server}</option>
-                ))}
-              </select>
-              <div className="text-xs text-emerald-300/70 max-w-32">
-                Les prix varient énormément !
-              </div>
+        {/* Serveur - Section dédiée */}
+        <div className="menu-group flex items-center justify-center bg-gradient-to-r from-emerald-900/50 to-blue-900/50 rounded-xl px-4 py-4 border-2 border-emerald-500/50 h-20 mb-4">
+          <div className="flex items-center gap-3">
+            <span className="text-emerald-400 text-lg">🌐</span>
+            <span className="text-emerald-300 text-sm font-medium">Serveur :</span>
+            <select
+              value={serverId}
+              onChange={(e) => setServerId(e.target.value)}
+              className={`px-4 py-2 rounded-lg bg-gradient-to-r from-emerald-800/50 to-blue-800/50 text-white border-2 border-emerald-500/50 text-sm font-medium focus:ring-2 focus:ring-emerald-400 focus:border-emerald-400 transition-all duration-200 hover:border-emerald-400`}
+              title="⚠️ IMPORTANT : Choisissez votre serveur ! Les prix varient énormément entre serveurs"
+            >
+              {servers.map(server => (
+                <option key={server} value={server} className="bg-slate-800 text-white">{server}</option>
+              ))}
+            </select>
+            <div className="text-xs text-emerald-300/70 max-w-32">
+              Les prix varient énormément !
             </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-3 gap-4 mb-3">
+          {/* Colonne 1 - Rafraîchir */}
+          <div className="menu-group flex items-center justify-center bg-slate-800/50 rounded-xl px-4 py-4 border border-slate-700 h-20">
+            <button
+              onClick={onRefreshPrices}
+              disabled={!itemsCount}
+              className={`px-3 py-1.5 rounded-lg text-sm transition-all duration-200 ${
+                itemsCount 
+                  ? "bg-gray-700 hover:bg-gray-600 text-white border border-gray-600" 
+                  : "bg-gray-800/50 text-gray-500 cursor-not-allowed"
+              }`}
+              title="Écrase vos prix locaux avec les derniers prix communautaires"
+            >
+              🔄 Rafraîchir
+            </button>
           </div>
 
-          {/* Données */}
+          {/* Colonne 2 - Comparer */}
           <div className="menu-group flex items-center justify-center bg-slate-800/50 rounded-xl px-4 py-4 border border-slate-700 h-20">
-            <div className="flex items-center gap-3">
-              <button
-                onClick={onRefreshPrices}
-                disabled={!itemsCount}
-                className={`px-3 py-1.5 rounded-lg text-sm transition-all duration-200 ${
-                  itemsCount 
-                    ? "bg-gray-700 hover:bg-gray-600 text-white border border-gray-600" 
-                    : "bg-gray-800/50 text-gray-500 cursor-not-allowed"
-                }`}
-                title="Écrase vos prix locaux avec les derniers prix communautaires"
-              >
-                🔄 Rafraîchir
-              </button>
-              
-              <button
-                onClick={onOpenComparison}
-                disabled={selectedForComparison.size < 2}
-                className={`px-3 py-1.5 rounded-lg text-sm transition-all duration-200 ${
-                  selectedForComparison.size >= 2 
-                    ? "bg-gray-700 hover:bg-gray-600 text-white shadow-lg hover:shadow-gray-500/25" 
-                    : "bg-gray-800/40 text-gray-400/50 cursor-not-allowed"
-                }`}
-                title={selectedForComparison.size >= 2 ? "Comparer les items sélectionnés" : "Sélectionnez au moins 2 items"}
-              >
-                📊 Comparer ({selectedForComparison.size})
-              </button>
-              
-              <button
-                onClick={onOpenFavorites}
-                disabled={favoritesLoading}
-                className={`px-3 py-1.5 rounded-lg text-sm transition-all duration-200 ${
-                  user 
-                    ? "bg-yellow-600 hover:bg-yellow-500 text-white shadow-lg hover:shadow-yellow-500/25" 
-                    : "bg-yellow-900/40 text-yellow-300/50 hover:bg-yellow-800/60"
-                }`}
-                title={user ? "Gérer mes favoris" : "Connexion requise pour les favoris"}
-              >
-                {favoritesLoading ? "⏳..." : `⭐ Favoris (${favoritesCount})`}
-              </button>
-            </div>
+            <button
+              onClick={onOpenComparison}
+              disabled={selectedForComparison.size < 2}
+              className={`px-3 py-1.5 rounded-lg text-sm transition-all duration-200 ${
+                selectedForComparison.size >= 2 
+                  ? "bg-gray-700 hover:bg-gray-600 text-white shadow-lg hover:shadow-gray-500/25" 
+                  : "bg-gray-800/40 text-gray-400/50 cursor-not-allowed"
+              }`}
+              title={selectedForComparison.size >= 2 ? "Comparer les items sélectionnés" : "Sélectionnez au moins 2 items"}
+            >
+              📊 Comparer ({selectedForComparison.size})
+            </button>
           </div>
 
-          {/* Sessions */}
+          {/* Colonne 3 - Favoris */}
           <div className="menu-group flex items-center justify-center bg-slate-800/50 rounded-xl px-4 py-4 border border-slate-700 h-20">
-            <div className="flex items-center gap-3">
-              <button
-                onClick={() => {
-                  if (!user) {
-                    onShowAuthRequired();
-                    return;
-                  }
-                  onSave();
-                }}
-                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 ${
-                  user 
-                    ? "bg-gray-700 hover:bg-gray-600 text-white shadow-lg hover:shadow-gray-500/25" 
-                    : "bg-gray-800/40 text-gray-400/50 hover:bg-gray-700/60"
-                }`}
-                title={user ? "Enregistrer la session actuelle" : "Connexion requise pour enregistrer"}
-              >
-                💾 Enregistrer
-              </button>
-              
-              <button
-                onClick={() => {
-                  if (!user) {
-                    onShowAuthRequired();
-                    return;
-                  }
-                  onLoad();
-                }}
-                className={`px-3 py-1.5 rounded-lg text-sm transition-all duration-200 ${
-                  user 
-                    ? "bg-gray-700 hover:bg-gray-600 text-white border border-gray-600" 
-                    : "bg-gray-800/40 text-gray-400/50 hover:bg-gray-700/60"
-                }`}
-                title={user ? "Charger une session sauvegardée" : "Connexion requise pour charger"}
-              >
-                📂 Charger
-              </button>
-            </div>
+            <button
+              onClick={onOpenFavorites}
+              disabled={favoritesLoading}
+              className={`px-3 py-1.5 rounded-lg text-sm transition-all duration-200 ${
+                user 
+                  ? "bg-yellow-600 hover:bg-yellow-500 text-white shadow-lg hover:shadow-yellow-500/25" 
+                  : "bg-yellow-900/40 text-yellow-300/50 hover:bg-yellow-800/60"
+              }`}
+              title={user ? "Gérer mes favoris" : "Connexion requise pour les favoris"}
+            >
+              {favoritesLoading ? "⏳..." : `⭐ Favoris (${favoritesCount})`}
+            </button>
+          </div>
+        </div>
+
+        {/* Deuxième ligne - Sessions */}
+        <div className="grid grid-cols-3 gap-4 mb-3">
+          {/* Colonne 1 - Enregistrer */}
+          <div className="menu-group flex items-center justify-center bg-slate-800/50 rounded-xl px-4 py-4 border border-slate-700 h-20">
+            <button
+              onClick={() => {
+                if (!user) {
+                  onShowAuthRequired();
+                  return;
+                }
+                onSave();
+              }}
+              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 ${
+                user 
+                  ? "bg-gray-700 hover:bg-gray-600 text-white shadow-lg hover:shadow-gray-500/25" 
+                  : "bg-gray-800/40 text-gray-400/50 hover:bg-gray-700/60"
+              }`}
+              title={user ? "Enregistrer la session actuelle" : "Connexion requise pour enregistrer"}
+            >
+              💾 Enregistrer
+            </button>
           </div>
 
-          {/* Export/Partage */}
+          {/* Colonne 2 - Charger */}
           <div className="menu-group flex items-center justify-center bg-slate-800/50 rounded-xl px-4 py-4 border border-slate-700 h-20">
-            <div className="flex items-center gap-3">
-              <button
-                onClick={() => {
-                  if (!user) {
-                    onShowAuthRequired();
-                    return;
-                  }
-                  onShareByLink();
-                }}
-                className={`px-3 py-1.5 rounded-lg text-sm transition-all duration-200 ${
-                  user 
-                    ? "bg-gray-700/20 text-gray-300 border border-gray-500/30 hover:bg-gray-600/30 hover:border-gray-500/50" 
-                    : "bg-gray-800/40 text-gray-400/50 hover:bg-gray-700/60"
-                }`}
-                title={user ? "Partager la session par lien" : "Connexion requise pour partager"}
-              >
-                🔗 Partager
-              </button>
-              
-              <button
-                onClick={() => {
-                  if (!user) {
-                    onShowAuthRequired();
-                    return;
-                  }
-                  onExportJSON();
-                }}
-                className={`px-3 py-1.5 rounded-lg text-sm transition-all duration-200 ${
-                  user 
-                    ? "bg-gray-700/20 text-gray-300 border border-gray-500/30 hover:bg-gray-600/30 hover:border-gray-500/50" 
-                    : "bg-gray-800/40 text-gray-400/50 hover:bg-gray-700/60"
-                }`}
-                title={user ? "Exporter la session en JSON" : "Connexion requise pour exporter"}
-              >
-                📤 Export
-              </button>
-              
-              <button
-                onClick={() => {
-                  if (!user) {
-                    onShowAuthRequired();
-                    return;
-                  }
-                  onImportJSON();
-                }}
-                className={`px-3 py-1.5 rounded-lg text-sm transition-all duration-200 ${
-                  user 
-                    ? "bg-gray-700/20 text-gray-300 border border-gray-500/30 hover:bg-gray-600/30 hover:border-gray-500/50" 
-                    : "bg-gray-800/40 text-gray-400/50 hover:bg-gray-700/60"
-                }`}
-                title={user ? "Importer une session depuis JSON" : "Connexion requise pour importer"}
-              >
-                📥 Import
-              </button>
-            </div>
+            <button
+              onClick={() => {
+                if (!user) {
+                  onShowAuthRequired();
+                  return;
+                }
+                onLoad();
+              }}
+              className={`px-3 py-1.5 rounded-lg text-sm transition-all duration-200 ${
+                user 
+                  ? "bg-gray-700 hover:bg-gray-600 text-white border border-gray-600" 
+                  : "bg-gray-800/40 text-gray-400/50 hover:bg-gray-700/60"
+              }`}
+              title={user ? "Charger une session sauvegardée" : "Connexion requise pour charger"}
+            >
+              📂 Charger
+            </button>
           </div>
+
+          {/* Colonne 3 - Vide pour l'alignement */}
+          <div className="menu-group flex items-center justify-center bg-slate-800/50 rounded-xl px-4 py-4 border border-slate-700 h-20">
+            <div className="text-gray-500 text-sm">Sessions</div>
+          </div>
+        </div>
+
+        {/* Troisième ligne - Export/Partage */}
+        <div className="grid grid-cols-3 gap-4 mb-3">
+          {/* Colonne 1 - Partager */}
+          <div className="menu-group flex items-center justify-center bg-slate-800/50 rounded-xl px-4 py-4 border border-slate-700 h-20">
+            <button
+              onClick={() => {
+                if (!user) {
+                  onShowAuthRequired();
+                  return;
+                }
+                onShareByLink();
+              }}
+              className={`px-3 py-1.5 rounded-lg text-sm transition-all duration-200 ${
+                user 
+                  ? "bg-gray-700/20 text-gray-300 border border-gray-500/30 hover:bg-gray-600/30 hover:border-gray-500/50" 
+                  : "bg-gray-800/40 text-gray-400/50 hover:bg-gray-700/60"
+              }`}
+              title={user ? "Partager la session par lien" : "Connexion requise pour partager"}
+            >
+              🔗 Partager
+            </button>
+          </div>
+
+          {/* Colonne 2 - Export */}
+          <div className="menu-group flex items-center justify-center bg-slate-800/50 rounded-xl px-4 py-4 border border-slate-700 h-20">
+            <button
+              onClick={() => {
+                if (!user) {
+                  onShowAuthRequired();
+                  return;
+                }
+                onExportJSON();
+              }}
+              className={`px-3 py-1.5 rounded-lg text-sm transition-all duration-200 ${
+                user 
+                  ? "bg-gray-700/20 text-gray-300 border border-gray-500/30 hover:bg-gray-600/30 hover:border-gray-500/50" 
+                  : "bg-gray-800/40 text-gray-400/50 hover:bg-gray-700/60"
+              }`}
+              title={user ? "Exporter la session en JSON" : "Connexion requise pour exporter"}
+            >
+              📤 Export
+            </button>
+          </div>
+
+          {/* Colonne 3 - Import */}
+          <div className="menu-group flex items-center justify-center bg-slate-800/50 rounded-xl px-4 py-4 border border-slate-700 h-20">
+            <button
+              onClick={() => {
+                if (!user) {
+                  onShowAuthRequired();
+                  return;
+                }
+                onImportJSON();
+              }}
+              className={`px-3 py-1.5 rounded-lg text-sm transition-all duration-200 ${
+                user 
+                  ? "bg-gray-700/20 text-gray-300 border border-gray-500/30 hover:bg-gray-600/30 hover:border-gray-500/50" 
+                  : "bg-gray-800/40 text-gray-400/50 hover:bg-gray-700/60"
+              }`}
+              title={user ? "Importer une session depuis JSON" : "Connexion requise pour importer"}
+            >
+              📥 Import
+            </button>
+          </div>
+        </div>
 
         </div>
 
