@@ -316,6 +316,7 @@ export default function ShoppingList({
                           width={420}
                           height={220}
                           position="cursor"
+                          serverId={serverId}
                         >
                           <img
                             src={r.img}
@@ -341,6 +342,7 @@ export default function ShoppingList({
                             width={420}
                             height={220}
                             position="cursor"
+                            serverId={serverId}
                           >
                             <span className="leading-tight cursor-default group break-words">
                               <span className="group-hover:font-semibold transition">
@@ -490,6 +492,7 @@ export default function ShoppingList({
                 id={sticky.id}
                 title={sticky.title}
                 staticOpen={true}
+                serverId={serverId}
               />
               <div className="text-xs text-slate-500 mt-2">
                 Survolez la zone pour inspecter précisément le graphe. Échap pour fermer.
