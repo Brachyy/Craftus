@@ -20,8 +20,11 @@ export async function addItemToSales(userId, item, serverId) {
     itemImage: item.img,
     sellPrice: item.sellPrice || 0,
     investment: calculateInvestment(item),
+    materialsInvestment: calculateMaterialsInvestment(item),
+    runeInvestment: calculateRuneInvestment(item),
     gain: calculateGain(item),
     craftCount: item.craftCount || 1,
+    itemKey: item.key, // Ajouter la clé pour identifier les items forgemagés
     timestamp: new Date(),
     sold: false, // false = en vente, true = vendu
   };
@@ -29,6 +32,10 @@ export async function addItemToSales(userId, item, serverId) {
   try {
     const docRef = await addDoc(collection(db, SALES_COLLECTION), saleData);
     console.log('Item ajouté en vente:', docRef.id);
+    
+    // Mettre à jour les stats du dashboard (pour voir les items en cours de vente)
+    await updateDashboardStats(userId, serverId, { ...saleData, saleId: docRef.id });
+    
     return docRef.id;
   } catch (error) {
     console.error('Erreur lors de l\'ajout en vente:', error);
@@ -57,9 +64,12 @@ export async function addItemsToSales(userId, items, serverId) {
   }));
 
   try {
-    const promises = salesData.map(saleData => 
-      addDoc(collection(db, SALES_COLLECTION), saleData)
-    );
+    const promises = salesData.map(async (saleData, index) => {
+      const docRef = await addDoc(collection(db, SALES_COLLECTION), saleData);
+      // Mettre à jour les stats du dashboard pour chaque item
+      await updateDashboardStats(userId, serverId, { ...saleData, saleId: docRef.id });
+      return docRef;
+    });
     const docRefs = await Promise.all(promises);
     console.log(`${docRefs.length} items ajoutés en vente`);
     return docRefs.map(ref => ref.id);
@@ -191,12 +201,14 @@ export async function updateSalePrice(saleId, newPrice, userId) {
  */
 async function updateDashboardStats(userId, serverId, saleData) {
   const today = new Date();
+  const startOfHour = new Date(today.getFullYear(), today.getMonth(), today.getDate(), today.getHours());
   const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
   const startOfWeek = new Date(startOfDay);
   startOfWeek.setDate(startOfDay.getDate() - startOfDay.getDay());
   const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
   
   const periods = [
+    { period: 'hour', start: startOfHour },
     { period: 'day', start: startOfDay },
     { period: 'week', start: startOfWeek },
     { period: 'month', start: startOfMonth }
@@ -204,6 +216,7 @@ async function updateDashboardStats(userId, serverId, saleData) {
   
   for (const { period, start } of periods) {
     const statsId = `${userId}_${serverId}_${period}_${start.getTime()}`;
+    console.log(`💾 Sauvegarde stats pour ${period}: ${statsId}`);
     
     try {
       // Vérifier si le document existe
@@ -217,6 +230,7 @@ async function updateDashboardStats(userId, serverId, saleData) {
           salesCount: increment(1),
           lastUpdated: new Date()
         });
+        console.log(`✅ Stats ${period} mises à jour`);
       } else {
         // Créer le document avec les données initiales
         await setDoc(doc(db, STATS_COLLECTION, statsId), {
@@ -229,6 +243,7 @@ async function updateDashboardStats(userId, serverId, saleData) {
           lastUpdated: new Date(),
           topItems: []
         });
+        console.log(`🆕 Nouveau document ${period} créé`);
       }
     } catch (error) {
       console.error('Erreur lors de la mise à jour des stats:', error);
@@ -236,6 +251,7 @@ async function updateDashboardStats(userId, serverId, saleData) {
     
     // Mettre à jour le top 10 des items
     await updateTopItems(userId, serverId, period, start, saleData);
+    console.log(`📊 Top items ${period} mis à jour`);
   }
 }
 
@@ -252,20 +268,32 @@ async function updateTopItems(userId, serverId, period, periodStart, saleData) {
       const statsData = statsDoc.data();
       const topItems = statsData.topItems || [];
       
-      // Ajouter chaque vente comme une entrée séparée dans le Top 10
-      // Chaque vente reste individuelle, même si c'est le même item
-      topItems.push({
-        saleId: saleData.saleId || '', // ID unique de la vente
+      // Vérifier si cette vente existe déjà (éviter les doublons)
+      const existingIndex = topItems.findIndex(item => item.saleId === saleData.saleId);
+      
+      const itemData = {
+        saleId: saleData.saleId || `temp_${Date.now()}`, // ID unique de la vente
         itemId: saleData.itemId || 0,
+        itemKey: saleData.itemKey || '', // Clé pour identifier les items forgemagés
         itemName: saleData.itemName || '',
         itemImage: saleData.itemImage || '',
         totalGain: saleData.gain || 0,
         totalInvestment: saleData.investment || 0,
+        materialsInvestment: saleData.materialsInvestment || saleData.investment || 0,
+        runeInvestment: saleData.runeInvestment || 0,
         salesCount: 1,
         totalQuantitySold: (saleData.craftCount || 1),
         sellPrice: saleData.sellPrice || 0,
         timestamp: saleData.timestamp || new Date()
-      });
+      };
+      
+      if (existingIndex !== -1) {
+        // Mettre à jour l'item existant
+        topItems[existingIndex] = itemData;
+      } else {
+        // Ajouter un nouvel item
+        topItems.push(itemData);
+      }
       
       // Trier par gain total et garder seulement le top 10
       topItems.sort((a, b) => b.totalGain - a.totalGain);
@@ -275,10 +303,13 @@ async function updateTopItems(userId, serverId, period, periodStart, saleData) {
       const cleanedTop10 = top10.map(item => ({
         saleId: item.saleId || '',
         itemId: item.itemId || 0,
+        itemKey: item.itemKey || '',
         itemName: item.itemName || '',
         itemImage: item.itemImage || '',
         totalGain: item.totalGain || 0,
         totalInvestment: item.totalInvestment || 0,
+        materialsInvestment: item.materialsInvestment || item.totalInvestment || 0,
+        runeInvestment: item.runeInvestment || 0,
         salesCount: item.salesCount || 1,
         totalQuantitySold: item.totalQuantitySold || 1,
         sellPrice: item.sellPrice || 0,
@@ -296,6 +327,88 @@ async function updateTopItems(userId, serverId, period, periodStart, saleData) {
 }
 
 /**
+ * Retirer un item du top 10 de TOUTES les périodes ET supprimer la vente
+ */
+export async function removeItemFromTop10(userId, serverId, period, saleId) {
+  if (!userId) throw new Error('Utilisateur non connecté');
+  
+  const today = new Date();
+  const periods = ['hour', 'day', 'week', 'month'];
+  
+  // Calculer les dates de début pour chaque période
+  const periodStarts = {
+    hour: new Date(today.getFullYear(), today.getMonth(), today.getDate(), today.getHours()),
+    day: new Date(today.getFullYear(), today.getMonth(), today.getDate()),
+    week: (() => {
+      const start = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+      start.setDate(start.getDate() - start.getDay());
+      return start;
+    })(),
+    month: new Date(today.getFullYear(), today.getMonth(), 1)
+  };
+  
+  try {
+    // 1. Supprimer la vente de Firebase
+    // Chercher par l'ID du document plutôt que par saleId
+    const salesQuery = query(
+      collection(db, SALES_COLLECTION),
+      where('userId', '==', userId),
+      where('serverId', '==', serverId)
+    );
+    
+    const salesSnapshot = await getDocs(salesQuery);
+    const saleToDelete = salesSnapshot.docs.find(doc => doc.id === saleId);
+    
+    if (saleToDelete) {
+      await deleteDoc(saleToDelete.ref);
+      console.log(`Vente ${saleId} supprimée de Firebase`);
+    } else {
+      console.log(`Vente ${saleId} non trouvée dans Firebase`);
+    }
+    
+    // 2. Supprimer l'item de toutes les périodes du top 10
+    const deletePromises = periods.map(async (currentPeriod) => {
+      const start = periodStarts[currentPeriod];
+      const statsId = `${userId}_${serverId}_${currentPeriod}_${start.getTime()}`;
+      
+      try {
+        const statsDoc = await getDoc(doc(db, STATS_COLLECTION, statsId));
+        
+        if (statsDoc.exists()) {
+          const statsData = statsDoc.data();
+          const topItems = statsData.topItems || [];
+          
+          // Retirer l'item avec le saleId spécifié
+          const filteredItems = topItems.filter(item => item.saleId !== saleId);
+          
+          // Mettre à jour le document seulement si l'item a été trouvé et supprimé
+          if (filteredItems.length !== topItems.length) {
+            await updateDoc(doc(db, STATS_COLLECTION, statsId), {
+              topItems: filteredItems
+            });
+            console.log(`Item ${saleId} retiré du top 10 ${currentPeriod}`);
+            return { period: currentPeriod, removed: true };
+          }
+        }
+        return { period: currentPeriod, removed: false };
+      } catch (error) {
+        console.error(`Erreur lors de la suppression du top item ${currentPeriod}:`, error);
+        return { period: currentPeriod, removed: false, error };
+      }
+    });
+    
+    const results = await Promise.all(deletePromises);
+    const removedFrom = results.filter(r => r.removed).map(r => r.period);
+    
+    console.log(`Item ${saleId} supprimé des périodes: ${removedFrom.join(', ')}`);
+    return removedFrom;
+  } catch (error) {
+    console.error('Erreur lors de la suppression globale du top item:', error);
+    throw error;
+  }
+}
+
+/**
  * Récupérer les statistiques du dashboard (filtrées par serveur)
  */
 export async function getDashboardStats(userId, serverId, period = 'day') {
@@ -305,6 +418,9 @@ export async function getDashboardStats(userId, serverId, period = 'day') {
   let start;
   
   switch (period) {
+    case 'hour':
+      start = new Date(today.getFullYear(), today.getMonth(), today.getDate(), today.getHours());
+      break;
     case 'day':
       start = new Date(today.getFullYear(), today.getMonth(), today.getDate());
       break;
@@ -325,10 +441,16 @@ export async function getDashboardStats(userId, serverId, period = 'day') {
     
     // Utiliser getDoc avec l'ID du document directement
     const statsId = `${userId}_${serverId}_${period}_${start.getTime()}`;
+    console.log(`🔍 Recherche stats pour: ${statsId}`);
     const statsDoc = await getDoc(doc(db, STATS_COLLECTION, statsId));
     
     if (statsDoc.exists()) {
       const stats = statsDoc.data();
+      console.log(`✅ Stats trouvées pour ${period}:`, {
+        topItemsCount: stats.topItems?.length || 0,
+        totalGains: stats.totalGains,
+        salesCount: stats.salesCount
+      });
       
       return {
         ...stats,
@@ -336,6 +458,7 @@ export async function getDashboardStats(userId, serverId, period = 'day') {
       };
     }
     
+    console.log(`❌ Aucune stats trouvée pour ${period}, utilisation des métriques avancées`);
     // Retourner les métriques avancées même si dashboard_stats n'existe pas
     return {
       ...advancedStats,
@@ -429,20 +552,48 @@ async function calculateAdvancedMetrics(userId, serverId, period, periodStart) {
 /**
  * Récupérer l'historique des gains par jour pour le graphique
  */
-export async function getDailyGainsHistory(userId, serverId, days = 30) {
+export async function getDailyGainsHistory(userId, serverId, period = 'day', days = 30) {
   if (!userId) throw new Error('Utilisateur non connecté');
   
-  const endDate = new Date();
-  const startDate = new Date();
-  startDate.setDate(endDate.getDate() - days);
+  const today = new Date();
+  let startDate, endDate;
+  
+  // Utiliser la même logique que getDashboardStats pour la cohérence
+  switch (period) {
+    case 'hour':
+      startDate = new Date(today.getFullYear(), today.getMonth(), today.getDate(), today.getHours());
+      endDate = new Date(today.getFullYear(), today.getMonth(), today.getDate(), today.getHours() + 1);
+      break;
+    case 'day':
+      startDate = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+      endDate = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1);
+      break;
+    case 'week':
+      startDate = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+      startDate.setDate(startDate.getDate() - startDate.getDay());
+      endDate = new Date(startDate);
+      endDate.setDate(startDate.getDate() + 7);
+      break;
+    case 'month':
+      startDate = new Date(today.getFullYear(), today.getMonth(), 1);
+      endDate = new Date(today.getFullYear(), today.getMonth() + 1, 1);
+      break;
+    default:
+      throw new Error('Période invalide');
+  }
   
   try {
+    // Pour la période "hour", utiliser toutes les ventes (dashboard)
+    if (period === 'hour') {
+      return await calculateDashboardHistoryFromSales(userId, serverId, startDate, endDate, period);
+    }
+    
     // Requête simplifiée avec userId, serverId et period pour éviter l'index composite
     const q = query(
       collection(db, STATS_COLLECTION),
       where('userId', '==', userId),
       where('serverId', '==', serverId),
-      where('period', '==', 'day')
+      where('period', '==', period)
     );
     
     const querySnapshot = await getDocs(q);
@@ -457,7 +608,7 @@ export async function getDailyGainsHistory(userId, serverId, days = 30) {
     
     // Si pas de données dans dashboard_stats, calculer depuis sales
     if (history.length === 0) {
-      return await calculateDailyHistoryFromSales(userId, serverId, startDate, endDate);
+      return await calculateDashboardHistoryFromSales(userId, serverId, startDate, endDate, period);
     }
     
     // Trier côté client par date (plus ancien en premier)
@@ -494,6 +645,19 @@ function isEquipment(it) {
   ].some(k => t.includes(k));
 }
 
+function calculateMaterialsInvestment(item) {
+  const perUnit = (item.ingredients || []).reduce((sum, ing) => {
+    if (ing.farmed) return sum;
+    return sum + (ing.unitPrice ?? 0) * ing.qty;
+  }, 0);
+  return perUnit * (item.craftCount || 1);
+}
+
+function calculateRuneInvestment(item) {
+  const runeInvestment = isEquipment(item) ? Number(item.runeInvestment || 0) : 0;
+  return runeInvestment * (item.craftCount || 1);
+}
+
 function calculateGain(item) {
   const investment = calculateInvestment(item);
   const grossRevenue = (item.sellPrice ?? 0) * (item.craftCount || 1);
@@ -501,6 +665,59 @@ function calculateGain(item) {
   const netRevenue = grossRevenue - tax;
   
   return netRevenue - investment;
+}
+
+/**
+ * Calculer l'historique quotidien depuis toutes les ventes (pour le dashboard)
+ */
+async function calculateDashboardHistoryFromSales(userId, serverId, startDate, endDate, period = 'day') {
+  try {
+    // Récupérer TOUTES les ventes (vendues ET en cours) pour le serveur
+    const q = query(
+      collection(db, SALES_COLLECTION),
+      where('userId', '==', userId),
+      where('serverId', '==', serverId)
+    );
+    
+    const querySnapshot = await getDocs(q);
+    const sales = querySnapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    }));
+    
+    // Créer un point par vente (pas de groupement)
+    const result = [];
+    
+    sales.forEach(sale => {
+      // Utiliser soldAt si vendu, sinon timestamp pour les ventes en cours
+      const saleDate = sale.sold 
+        ? (sale.soldAt?.toDate ? sale.soldAt.toDate() : new Date(sale.soldAt))
+        : (sale.timestamp?.toDate ? sale.timestamp.toDate() : new Date(sale.timestamp));
+      
+      if (saleDate >= startDate && saleDate <= endDate) {
+        // Un point par vente individuelle
+        const gain = sale.sold ? (sale.gain || 0) : (sale.gain || 0);
+        
+        result.push({
+          date: saleDate,
+          gains: gain,
+          count: 1,
+          saleId: sale.saleId,
+          itemName: sale.itemName,
+          sellPrice: sale.sellPrice,
+          investment: sale.investment || 0
+        });
+      }
+    });
+
+    // Trier par date
+    result.sort((a, b) => a.date.getTime() - b.date.getTime());
+    
+    return result;
+  } catch (error) {
+    console.error('Erreur lors du calcul de l\'historique dashboard depuis les ventes:', error);
+    return [];
+  }
 }
 
 /**
@@ -522,16 +739,23 @@ async function calculateDailyHistoryFromSales(userId, serverId, startDate, endDa
       ...doc.data()
     }));
     
-    // Grouper par jour
+    // Grouper par jour ou par heure selon la période
     const dailyStats = {};
+    const isHourly = (endDate.getTime() - startDate.getTime()) <= 2 * 60 * 60 * 1000; // Si moins de 2h
     
     sales.forEach(sale => {
       const saleDate = sale.soldAt?.toDate ? sale.soldAt.toDate() : new Date(sale.soldAt);
+      
       if (saleDate >= startDate && saleDate <= endDate) {
-        const dayKey = saleDate.toISOString().split('T')[0];
+        const dayKey = isHourly 
+          ? `${saleDate.getFullYear()}-${String(saleDate.getMonth() + 1).padStart(2, '0')}-${String(saleDate.getDate()).padStart(2, '0')}T${String(saleDate.getHours()).padStart(2, '0')}:00` // Grouper par heure précise
+          : saleDate.toISOString().split('T')[0]; // Grouper par jour
+        
         if (!dailyStats[dayKey]) {
           dailyStats[dayKey] = {
-            date: new Date(saleDate.getFullYear(), saleDate.getMonth(), saleDate.getDate()),
+            date: isHourly 
+              ? new Date(saleDate.getFullYear(), saleDate.getMonth(), saleDate.getDate(), saleDate.getHours())
+              : new Date(saleDate.getFullYear(), saleDate.getMonth(), saleDate.getDate()),
             gains: 0,
             investment: 0,
             salesCount: 0

@@ -18,6 +18,7 @@ export default function MainMenu({
   onRefreshPrices,
   itemsCount,
   onOpenComparison,
+  onOpenPriceComparison,
   selectedForComparison,
   onOpenFavorites,
   favoritesCount,
@@ -83,14 +84,14 @@ export default function MainMenu({
               </button>
               
               <button
-                onClick={onOpenComparison}
+                onClick={onOpenPriceComparison}
                 disabled={selectedForComparison.size < 2}
                 className={`px-3 py-1.5 rounded-lg text-sm transition-all duration-200 ${
                   selectedForComparison.size >= 2 
                     ? "bg-gray-700 hover:bg-gray-600 text-white shadow-lg hover:shadow-gray-500/25" 
                     : "bg-gray-800/40 text-gray-400/50 cursor-not-allowed"
                 }`}
-                title={selectedForComparison.size >= 2 ? "Comparer les items sélectionnés" : "Sélectionnez au moins 2 items"}
+                title={selectedForComparison.size >= 2 ? "Comparer les graphiques de prix" : "Sélectionnez au moins 2 items"}
               >
                 📊 Comparer ({selectedForComparison.size})
               </button>
@@ -348,14 +349,14 @@ export default function MainMenu({
           </button>
 
           <button
-            onClick={onOpenComparison}
+            onClick={onOpenPriceComparison}
             disabled={selectedForComparison.size < 2}
             className={`mobile-menu-item px-3 py-2 rounded-lg text-sm menu-button ${
               selectedForComparison.size >= 2 
                 ? "bg-gray-700/20 text-gray-300 border border-gray-500/30" 
                 : "bg-gray-800/40 text-gray-400/50"
             }`}
-            title="Comparer"
+            title="Comparer les graphiques"
           >
             📊 Comparer ({selectedForComparison.size})
           </button>

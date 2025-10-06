@@ -9,6 +9,42 @@ import { db } from './firebase';
 
 const USER_PROFILES_COLLECTION = 'userProfiles';
 
+// Sauvegarder les items forgemagie dans Firebase
+export async function saveForgemagieItems(uid, forgemagieItems) {
+  try {
+    const profileDoc = doc(db, USER_PROFILES_COLLECTION, uid);
+    await setDoc(profileDoc, {
+      forgemagieItems: Array.from(forgemagieItems),
+      lastUpdated: serverTimestamp()
+    }, { merge: true });
+    console.log(`[saveForgemagieItems] Items forgemagie sauvegardés pour ${uid}:`, Array.from(forgemagieItems));
+  } catch (error) {
+    console.error('[saveForgemagieItems] Erreur:', error);
+    throw error;
+  }
+}
+
+// Récupérer les items forgemagie depuis Firebase
+export async function getForgemagieItems(uid) {
+  try {
+    const profileDoc = doc(db, USER_PROFILES_COLLECTION, uid);
+    const docSnap = await getDoc(profileDoc);
+    
+    if (docSnap.exists()) {
+      const profile = docSnap.data();
+      const forgemagieItems = profile.forgemagieItems || [];
+      console.log(`[getForgemagieItems] Items forgemagie récupérés pour ${uid}:`, forgemagieItems);
+      return new Set(forgemagieItems);
+    }
+    
+    console.log(`[getForgemagieItems] Aucun profil trouvé pour ${uid}, retour d'un Set vide`);
+    return new Set();
+  } catch (error) {
+    console.error('[getForgemagieItems] Erreur:', error);
+    return new Set();
+  }
+}
+
 // Obtenir le profil d'un utilisateur (avec fallback localStorage)
 export async function getUserProfile(uid) {
   try {

@@ -21,6 +21,8 @@ export default function ItemCard({
   onToggleFavorite,
   isFavorite = false,
   onPutOnSale,
+  onToggleForgemagie,
+  isForgemagie = false,
   user,
   serverId, // Ajouter serverId pour les warnings
   refreshTrigger = 0, // Nouveau prop pour déclencher le rechargement
@@ -114,14 +116,26 @@ export default function ItemCard({
 
   // Sélectionne tout au focus clavier; au clic souris, laisse le caret où il est
   const handleFocus = (e) => {
-    if (e.detail === 0) {
-      // focus programmatique / clavier
+    // Utiliser une approche plus simple : ne sélectionner que si c'est un focus programmatique
+    // ou si l'utilisateur utilise Tab pour naviguer
+    const isKeyboardNavigation = e.detail === 0 && (
+      e.nativeEvent?.isTrusted === false || // Focus programmatique
+      e.target.matches(':focus-visible') // Focus visible (clavier)
+    );
+    
+    if (isKeyboardNavigation) {
       requestAnimationFrame(() => e.target.select());
     }
   };
 
+  // Vérifier si l'item a un investissement en runes ou est marqué pour la forgemagie
+  const hasRuneInvestment = isEquipment(it) && Number(it.runeInvestment || 0) > 0;
+  const shouldHighlightBlue = hasRuneInvestment || isForgemagie;
+  
   return (
-    <div className={`rounded-2xl border ${colors.border} ${colors.panel} p-4`}>
+    <div className={`rounded-2xl border ${colors.border} ${colors.panel} p-4 ${
+      shouldHighlightBlue ? 'bg-blue-950/20 border-blue-500/30' : ''
+    }`}>
       {/* HEADER */}
       <div className="flex items-start justify-between gap-3 mb-3">
         <div className="flex items-start gap-3 min-w-0">
@@ -223,38 +237,52 @@ export default function ItemCard({
             {isFavorite ? '★' : '☆'}
           </button>
           
-          {/* Colonne 2 : Comparer */}
-          <label className="relative inline-flex items-center cursor-pointer select-none h-6">
-            <input
-              type="checkbox"
-              className="sr-only peer"
-              checked={isSelectedForComparison}
-              onChange={() => onToggleComparison?.(it.key)}
-            />
-            <span className="relative w-10 h-6 rounded-full bg-[#1b1f26] border border-white/10 peer-checked:bg-emerald-600 transition-colors"></span>
-            <span className="absolute top-1/2 left-[4px] -translate-y-1/2 h-5 w-5 rounded-full bg-[#0b0f14] border border-white/10 transition-transform peer-checked:translate-x-4"></span>
-            <span className="ml-2 text-xs text-slate-300">Comparer</span>
-          </label>
-          
-          {/* Colonne 3 : Retirer + Vendre */}
-          <div className="flex flex-col gap-2">
+          {/* Grille 2x2 : Retirer, Vendre, Comparer, FM */}
+          <div className="grid grid-cols-2 gap-2">
+            {/* Retirer */}
             <button
               onClick={() => onRemove?.(it.key)}
-              className="rounded-xl bg-rose-900/30 text-rose-300 hover:bg-rose-900/50 px-3 py-2 text-sm"
+              className="rounded-lg bg-rose-900/30 text-rose-300 hover:bg-rose-900/50 px-2 py-1 text-sm"
             >
               Retirer
             </button>
             
-            {/* Vendre en dessous de Retirer */}
+            {/* Vendre */}
             {user && (
               <button
                 onClick={() => onPutOnSale?.(it)}
-                className="rounded-xl bg-emerald-900/30 text-emerald-300 hover:bg-emerald-900/50 px-3 py-2 text-sm"
+                className="rounded-lg bg-emerald-900/30 text-emerald-300 hover:bg-emerald-900/50 px-2 py-1 text-sm"
                 title="Mettre en vente"
               >
                 Vendre
               </button>
             )}
+            
+            {/* Comparer */}
+            <label className="relative inline-flex items-center cursor-pointer select-none h-8">
+              <input
+                type="checkbox"
+                className="sr-only peer"
+                checked={isSelectedForComparison}
+                onChange={() => onToggleComparison?.(it.key)}
+              />
+              <span className="relative w-8 h-5 rounded-full bg-[#1b1f26] border border-white/10 peer-checked:bg-emerald-600 transition-colors"></span>
+              <span className="absolute left-0.5 h-4 w-4 rounded-full bg-[#0b0f14] border border-white/10 transition-transform peer-checked:translate-x-3"></span>
+              <span className="ml-2 text-xs text-slate-300">Comparer</span>
+            </label>
+            
+            {/* FM */}
+            <button
+              onClick={() => onToggleForgemagie?.(it.key)}
+              className={`px-2 py-1 text-sm rounded-lg transition-colors ${
+                isForgemagie 
+                  ? 'bg-blue-900/30 text-blue-300 hover:bg-blue-900/50' 
+                  : 'bg-slate-800/30 text-slate-400 hover:bg-blue-900/30 hover:text-blue-300'
+              }`}
+              title={isForgemagie ? "Retirer de la forgemagie" : "Marquer pour la forgemagie"}
+            >
+              FM
+            </button>
           </div>
         </div>
       </div>
@@ -329,7 +357,16 @@ export default function ItemCard({
       {isEquipment(it) && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
           <div>
-            <div className="text-xs text-slate-400 mb-1">Investissement Runes (k)</div>
+            <div className={`text-xs mb-1 ${
+              Number(it.runeInvestment || 0) > 0 
+                ? 'text-blue-300 font-medium' 
+                : 'text-slate-400'
+            }`}>
+              Investissement Runes (k)
+              {Number(it.runeInvestment || 0) > 0 && (
+                <span className="ml-1 text-blue-400">●</span>
+              )}
+            </div>
             <input
               type="text"
               inputMode="numeric"
@@ -351,7 +388,11 @@ export default function ItemCard({
                   onCommitRuneInvestment(it.key, previousValue);
                 }
               }}
-              className="h-10 w-full rounded-xl bg-[#1b1f26] border border-white/10 px-3"
+              className={`h-10 w-full rounded-xl px-3 ${
+                Number(it.runeInvestment || 0) > 0 
+                  ? 'bg-blue-950/30 border-blue-500/50 text-blue-100' 
+                  : 'bg-[#1b1f26] border-white/10'
+              }`}
               placeholder="0"
             />
             <div className="text-xs text-slate-400 mt-1">

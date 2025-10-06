@@ -86,8 +86,16 @@ export function currency(n) {
 
 /* ================== Calculs (inchangés) ================== */
 export function computeInvestment(it) {
-  const perUnit = it.ingredients.reduce((sum, ing) => sum + (ing.unitPrice ?? 0) * ing.qty, 0);
-  return perUnit * (it.craftCount || 1);
+  // Calculer le coût des ingrédients
+  const perUnit = (it.ingredients || []).reduce((sum, ing) => {
+    if (ing.farmed) return sum;
+    return sum + (ing.unitPrice ?? 0) * ing.qty;
+  }, 0);
+  
+  // Ajouter le coût des runes (seulement pour les équipements)
+  const runeInvestment = isEquipment(it) ? Number(it.runeInvestment || 0) : 0;
+  
+  return (perUnit + runeInvestment) * (it.craftCount || 1);
 }
 export function computeRevenue(it) {
   return (it.sellPrice ?? 0) * (it.craftCount || 1);

@@ -237,7 +237,14 @@ export default function ShoppingList({
 
   // util pour sélectionner tout le contenu au focus
   const handleFocus = (e) => {
-    if (e.detail === 0) {
+    // Utiliser une approche plus simple : ne sélectionner que si c'est un focus programmatique
+    // ou si l'utilisateur utilise Tab pour naviguer
+    const isKeyboardNavigation = e.detail === 0 && (
+      e.nativeEvent?.isTrusted === false || // Focus programmatique
+      e.target.matches(':focus-visible') // Focus visible (clavier)
+    );
+    
+    if (isKeyboardNavigation) {
       requestAnimationFrame(() => e.target.select());
     }
   };

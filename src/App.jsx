@@ -14,10 +14,11 @@ import { loadAnalyticsOptimized, isAnalyticsAvailable, trackEventOptimized, setU
 // Sales system
 import SalesModal from "./components/SalesModal";
 import DashboardModal from "./components/DashboardModal";
+import PriceComparisonModal from "./components/PriceComparisonModal";
 import NotificationToast from "./components/NotificationToast";
 import { addItemToSales, addItemsToSales } from "./lib/sales";
 
-import { itemAnkamaId, itemImage, itemLevel, itemName, isEquipment } from "./lib/utils";
+import { itemAnkamaId, itemImage, itemLevel, itemName, isEquipment, computeInvestment } from "./lib/utils";
 import {
   apiGET,
   searchItems,
@@ -32,7 +33,6 @@ import { auth, onAuthStateChanged, signInWithGoogle } from "./lib/firebase";
 import AuthBar from "./auth/AuthBar";
 import SaveDialog from "./sessions/SaveDialog";
 import LoadDialog from "./sessions/LoadDialog";
-import PriceComparisonModal from "./components/PriceComparisonModal";
 import SearchSuggestions from "./components/SearchSuggestions";
 import FavoritesModal from "./components/FavoritesModal";
 import HelpModal from "./components/HelpModal";
@@ -69,7 +69,7 @@ import {
   PRICE_KIND,
 } from "./lib/communityPrices";
 import { getUserName, setUserName } from "./lib/userNames";
-import { saveUserProfile } from "./lib/userProfiles";
+import { saveUserProfile, saveForgemagieItems, getForgemagieItems } from "./lib/userProfiles";
 import { getUserRankData, updateUserRank } from "./lib/userRanks";
 
 // Logos - utilisation des chemins publics
@@ -79,14 +79,6 @@ const craftusLogoNew = "/assets/craftus_logo.png";
 const TAX_RATE = 0.02;
 
 // ---- calculs (net = revenu brut - taxe 2%) ----
-function computeInvestment(it) {
-  const perUnit = (it.ingredients || []).reduce((sum, ing) => {
-    if (ing.farmed) return sum;
-    return sum + (ing.unitPrice ?? 0) * ing.qty;
-  }, 0);
-    const runeInvestment = isEquipment(it) ? Number(it.runeInvestment || 0) : 0;
-    return (perUnit + runeInvestment) * (it.craftCount || 1);
-}
 function computeGrossRevenue(it) {
   return (it.sellPrice ?? 0) * (it.craftCount || 1);
 }
@@ -200,12 +192,26 @@ export default function App() {
   // Comparaison de prix
   const [selectedForComparison, setSelectedForComparison] = useState(new Set());
   const [openComparison, setOpenComparison] = useState(false);
+  const [openPriceComparison, setOpenPriceComparison] = useState(false);
   const [openFavorites, setOpenFavorites] = useState(false);
 
   // Favoris Firebase
   const [favorites, setFavorites] = useState(new Set());
   const [favoriteItems, setFavoriteItems] = useState([]);
   const [favoritesLoading, setFavoritesLoading] = useState(false);
+  
+  // Forgemagie (état local pour ItemCard)
+  const [localForgemagieItems, setLocalForgemagieItems] = useState(new Set());
+  
+  // Forgemagie (état Firebase pour ventes/dashboard)
+  const [firebaseForgemagieItems, setFirebaseForgemagieItems] = useState(new Set());
+  
+  // Charger les items forgemagie depuis Firebase
+  useEffect(() => {
+    if (user?.uid) {
+      getForgemagieItems(user.uid).then(setFirebaseForgemagieItems);
+    }
+  }, [user?.uid]);
   const [searchHistory, setSearchHistory] = useState(() => {
     try {
       const saved = localStorage.getItem("craftus_search_history");
@@ -723,14 +729,27 @@ export default function App() {
     }
   }
 
-  // Mise à jour investissement runes
+  // Mise à jour investissement runes (état local uniquement)
   const updateRuneInvestment = (itemKey, runeInvestment) => {
     const val = runeInvestment === "" || runeInvestment == null ? undefined : Number(runeInvestment);
+    const hasRuneInvestment = val > 0;
+    
     setItems((prev) =>
       prev.map((it) =>
         it.key !== itemKey ? it : { ...it, runeInvestment: val }
       )
     );
+    
+    // Mettre à jour l'état local forgemagie
+    setLocalForgemagieItems(prev => {
+      const newSet = new Set(prev);
+      if (hasRuneInvestment) {
+        newSet.add(itemKey);
+      } else {
+        newSet.delete(itemKey);
+      }
+      return newSet;
+    });
   };
 
   // Commit investissement runes (ne fait rien car les prix des runes ne sont pas sauvegardés)
@@ -969,6 +988,63 @@ export default function App() {
       }
     } catch (error) {
       console.error("Error toggling favorite:", error);
+    }
+  };
+
+  // Gestion de la forgemagie (état local + Firebase)
+  const toggleForgemagie = async (itemKey) => {
+    const item = items.find(it => it.key === itemKey);
+    const hasRuneInvestment = isEquipment(item) && Number(item?.runeInvestment || 0) > 0;
+    const isManuallyForgemagie = localForgemagieItems.has(itemKey);
+    
+    // Si l'item est forgemagé automatiquement (prix de rune) OU manuellement
+    const isCurrentlyForgemagie = isManuallyForgemagie || hasRuneInvestment;
+    
+    // Mettre à jour l'état local
+    setLocalForgemagieItems(prev => {
+      const newSet = new Set(prev);
+      if (isCurrentlyForgemagie) {
+        newSet.delete(itemKey);
+      } else {
+        newSet.add(itemKey);
+      }
+      return newSet;
+    });
+    
+    // Mettre à jour l'état Firebase
+    setFirebaseForgemagieItems(prev => {
+      const newSet = new Set(prev);
+      if (isCurrentlyForgemagie) {
+        newSet.delete(itemKey);
+      } else {
+        newSet.add(itemKey);
+      }
+      return newSet;
+    });
+    
+    if (isCurrentlyForgemagie) {
+      // Réinitialiser le prix de rune de l'item
+      setItems(prev => prev.map(item => 
+        item.key === itemKey 
+          ? { ...item, runeInvestment: 0 }
+          : item
+      ));
+    }
+    
+    // Sauvegarder dans Firebase
+    if (user?.uid) {
+      try {
+        const newSet = new Set(firebaseForgemagieItems);
+        if (isCurrentlyForgemagie) {
+          newSet.delete(itemKey);
+        } else {
+          newSet.add(itemKey);
+        }
+        await saveForgemagieItems(user.uid, newSet);
+        console.log('✅ Items forgemagie sauvegardés dans Firebase');
+      } catch (error) {
+        console.error('❌ Erreur lors de la sauvegarde forgemagie:', error);
+      }
     }
   };
 
@@ -1321,6 +1397,7 @@ export default function App() {
           onRefreshPrices={refreshCommunityPricesForAll}
           itemsCount={items.length}
           onOpenComparison={() => setOpenComparison(true)}
+          onOpenPriceComparison={() => setOpenPriceComparison(true)}
           selectedForComparison={selectedForComparison}
           onOpenFavorites={() => setOpenFavorites(true)}
           favoritesCount={favorites.size}
@@ -1487,6 +1564,8 @@ export default function App() {
               isSelectedForComparison={selectedForComparison.has(it.key)}
               onToggleFavorite={toggleFavorite}
               isFavorite={favorites.has(it.ankamaId)}
+              onToggleForgemagie={toggleForgemagie}
+              isForgemagie={localForgemagieItems.has(it.key) || (isEquipment(it) && Number(it.runeInvestment || 0) > 0)}
               onPutOnSale={handlePutItemOnSale}
               user={user}
               serverId={serverId}
@@ -1532,7 +1611,7 @@ export default function App() {
       <FloatingNav
         onScrollToShoppingList={scrollToShoppingList}
         onScrollToComparison={scrollToComparison}
-        onOpenGraphComparison={() => setOpenComparison(true)}
+        onOpenGraphComparison={() => setOpenPriceComparison(true)}
         itemsCount={items.length}
         comparisonCount={selectedForComparison.size}
         selectedForComparisonCount={selectedForComparison.size}
@@ -1599,12 +1678,22 @@ export default function App() {
         }}
       />
       
+      {/* Modal de comparaison de graphiques */}
+      <PriceComparisonModal
+        open={openPriceComparison}
+        onClose={() => setOpenPriceComparison(false)}
+        items={items}
+        selectedKeys={selectedForComparison}
+        serverId={serverId}
+      />
+      
       {/* Modales du système de vente */}
       <SalesModal
         isOpen={showSalesModal}
         onClose={() => setShowSalesModal(false)}
         userId={user?.uid}
         serverId={serverId}
+        forgemagieItems={firebaseForgemagieItems}
       />
       
       <DashboardModal
@@ -1612,6 +1701,7 @@ export default function App() {
         onClose={() => setShowDashboardModal(false)}
         userId={user?.uid}
         serverId={serverId}
+        forgemagieItems={firebaseForgemagieItems}
       />
 
       {/* Notification Toast */}

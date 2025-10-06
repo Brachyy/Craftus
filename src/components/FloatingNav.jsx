@@ -56,7 +56,7 @@ const FloatingNav = ({ onScrollToShoppingList, onScrollToComparison, onOpenGraph
         <span className="font-medium text-sm">Courses</span>
       </button>
 
-      {/* Bouton Comparaison */}
+      {/* Bouton Résultats */}
       <button
         onClick={onScrollToComparison}
         className={`group relative flex items-center gap-2 px-4 py-3 rounded-full shadow-lg transition-all duration-200 transform hover:scale-105 ${
@@ -64,22 +64,15 @@ const FloatingNav = ({ onScrollToShoppingList, onScrollToComparison, onOpenGraph
             ? 'bg-blue-500 text-white'
             : 'bg-slate-800/90 text-slate-300 hover:bg-slate-700/90'
         }`}
-        title="Aller au tableau comparatif"
+        title="Aller au tableau de résultats"
       >
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
         </svg>
-        <span className="font-medium text-sm">Comparer</span>
-        
-        {/* Badge avec nombre d'items sélectionnés */}
-        {comparisonCount > 0 && (
-          <div className="absolute -top-1 -right-1 w-5 h-5 bg-blue-500 text-white text-xs rounded-full flex items-center justify-center font-semibold">
-            {comparisonCount}
-          </div>
-        )}
+        <span className="font-medium text-sm">Résultats</span>
       </button>
 
-      {/* Bouton Comparaison Graphiques */}
+      {/* Bouton Comparer */}
       <button
         onClick={onOpenGraphComparison}
         disabled={selectedForComparisonCount < 2}
@@ -93,7 +86,14 @@ const FloatingNav = ({ onScrollToShoppingList, onScrollToComparison, onOpenGraph
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" />
         </svg>
-        <span className="font-medium text-sm">Graphiques</span>
+        <span className="font-medium text-sm">Comparer</span>
+        
+        {/* Badge avec nombre d'items sélectionnés */}
+        {selectedForComparisonCount > 0 && (
+          <div className="absolute -top-1 -right-1 w-5 h-5 bg-blue-500 text-white text-xs rounded-full flex items-center justify-center font-semibold">
+            {selectedForComparisonCount}
+          </div>
+        )}
       </button>
 
       {/* Bouton Retour en haut */}

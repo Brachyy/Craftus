@@ -3,7 +3,7 @@ import { colors } from '../theme/colors';
 import { currency } from '../lib/utils';
 import { getUserSales, markItemAsSold, removeItemFromSales, updateSalePrice } from '../lib/sales';
 
-export default function SalesModal({ isOpen, onClose, userId, serverId }) {
+export default function SalesModal({ isOpen, onClose, userId, serverId, forgemagieItems = new Set() }) {
   const [sales, setSales] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -168,11 +168,19 @@ export default function SalesModal({ isOpen, onClose, userId, serverId }) {
 
           {!loading && filteredSales.length > 0 && (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {filteredSales.map((sale) => (
-                <div
-                  key={sale.id}
-                  className="rounded-xl bg-[#151A22] border border-white/10 p-4 hover:border-emerald-500/50 transition-colors"
-                >
+              {filteredSales.map((sale) => {
+                // Considérer comme forgemagie si marqué manuellement OU si a un prix de rune
+                const hasRuneInvestment = Number(sale.runeInvestment || 0) > 0;
+                const isForgemagie = forgemagieItems.has(sale.itemKey) || hasRuneInvestment;
+                return (
+                  <div
+                    key={sale.id}
+                    className={`rounded-xl border p-4 transition-colors ${
+                      isForgemagie 
+                        ? 'bg-blue-950/20 border-blue-500/30 hover:border-blue-400/50' 
+                        : 'bg-[#151A22] border-white/10 hover:border-emerald-500/50'
+                    }`}
+                  >
                   {/* Image et nom */}
                   <div className="flex items-center gap-3 mb-3">
                     <img
@@ -229,12 +237,35 @@ export default function SalesModal({ isOpen, onClose, userId, serverId }) {
                         </div>
                       )}
                     </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-xs text-slate-400">Investissement:</span>
-                      <span className="font-semibold text-orange-400">
-                        {currency(sale.investment)}
-                      </span>
-                    </div>
+                    {isForgemagie ? (
+                      <>
+                        <div className="flex justify-between items-center">
+                          <span className="text-xs text-slate-400">Matériaux:</span>
+                          <span className="font-semibold text-orange-400">
+                            {currency(sale.materialsInvestment || sale.investment)}
+                          </span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-xs text-slate-400">Runes:</span>
+                          <span className="font-semibold text-blue-400">
+                            {currency(sale.runeInvestment || 0)}
+                          </span>
+                        </div>
+                        <div className="flex justify-between items-center border-t border-white/10 pt-2">
+                          <span className="text-xs text-slate-400">Total:</span>
+                          <span className="font-semibold text-orange-400">
+                            {currency(sale.investment)}
+                          </span>
+                        </div>
+                      </>
+                    ) : (
+                      <div className="flex justify-between items-center">
+                        <span className="text-xs text-slate-400">Investissement:</span>
+                        <span className="font-semibold text-orange-400">
+                          {currency(sale.investment)}
+                        </span>
+                      </div>
+                    )}
                     <div className="flex justify-between items-center border-t border-white/10 pt-2">
                       <span className="text-xs text-slate-400">Gain estimé:</span>
                       <span className={`font-semibold ${sale.gain >= 0 ? 'text-green-400' : 'text-red-400'}`}>
@@ -259,7 +290,8 @@ export default function SalesModal({ isOpen, onClose, userId, serverId }) {
                     </button>
                   </div>
                 </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
