@@ -31,9 +31,80 @@ export default function ItemCard({
   const [ingredientPrices, setIngredientPrices] = useState({});
   const [forceRender, setForceRender] = useState(0); // Pour forcer le re-rendu
   const [previousValues, setPreviousValues] = useState({}); // Tracker les valeurs précédentes
+  const [showSaleDropdown, setShowSaleDropdown] = useState(false);
 
   const openSticky = (kind, id, title) => setSticky({ kind, id, title });
   const closeSticky = () => setSticky(null);
+
+  // Fonction pour vendre rapidement avec un multiplicateur
+  const handleQuickSale = (multiplier) => {
+    if (!onPutOnSale) return;
+    
+    console.log('Objet it complet:', it); // Debug complet de l'objet
+    
+    const craftCount = it.craftCount || 1;
+    const ratio = multiplier / craftCount;
+    
+    // Calculer l'investissement comme dans l'ItemCard
+    const ingredientsCost = (it.ingredients || []).reduce((sum, ing) => {
+      if (ing.farmed) return sum;
+      const q = Number(ing.qty || 0);
+      const p = Math.round(Number(ing.unitPrice || 0));
+      return sum + q * p;
+    }, 0);
+    
+    const runeCost = isEquipment(it) ? Number(it.runeInvestment || 0) : 0;
+    const investmentPerUnit = ingredientsCost + runeCost;
+    const totalInvestment = investmentPerUnit * multiplier;
+    
+    // Calculer le prix de vente et les taxes
+    const unitSell = Math.round(Number(it.sellPrice || 0));
+    const unitTax = Math.floor(unitSell * 0.02);
+    const totalTax = unitTax * multiplier;
+    const revenueNet = unitSell * multiplier - totalTax;
+    const gain = revenueNet - totalInvestment;
+    
+    const saleData = {
+      itemId: it.ankamaId,
+      itemName: it.displayName,
+      itemImage: it.img,
+      craftCount: multiplier,
+      sellPrice: unitSell * multiplier, // Prix total de vente
+      gain: gain,
+      investment: totalInvestment,
+      runeInvestment: runeCost * multiplier,
+      materialsInvestment: ingredientsCost * multiplier,
+      itemKey: `${it.ankamaId}-${Date.now()}`,
+      timestamp: new Date(),
+      sold: false
+    };
+    
+    console.log('Données de vente:', saleData); // Debug
+    console.log('Calculs:', { 
+      ingredientsCost, 
+      runeCost, 
+      investmentPerUnit, 
+      totalInvestment, 
+      unitSell, 
+      totalTax, 
+      revenueNet, 
+      gain 
+    });
+    onPutOnSale(saleData);
+    setShowSaleDropdown(false);
+  };
+
+  // Fermer le dropdown quand on clique ailleurs
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (showSaleDropdown && !event.target.closest('.relative')) {
+        setShowSaleDropdown(false);
+      }
+    };
+    
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showSaleDropdown]);
 
   // Calculer les fluctuations pour chaque ingrédient avec useMemo
   const ingredientFluctuations = useMemo(() => {
@@ -249,13 +320,47 @@ export default function ItemCard({
             
             {/* Vendre */}
             {user && (
-              <button
-                onClick={() => onPutOnSale?.(it)}
-                className="rounded-lg bg-emerald-900/30 text-emerald-300 hover:bg-emerald-900/50 px-2 py-1 text-sm"
-                title="Mettre en vente"
-              >
-                Vendre
-              </button>
+              <div className="relative">
+                <button
+                  onClick={() => setShowSaleDropdown(!showSaleDropdown)}
+                  className="rounded-lg bg-emerald-900/30 text-emerald-300 hover:bg-emerald-900/50 px-2 py-1 text-sm w-full flex items-center justify-between"
+                  title="Mettre en vente"
+                >
+                  Vendre
+                  <svg className="w-3 h-3 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+                
+                {showSaleDropdown && (
+                  <div className="absolute top-full left-0 right-0 mt-1 bg-slate-800 border border-slate-600 rounded-lg shadow-lg z-10">
+                    <button
+                      onClick={() => handleQuickSale(1)}
+                      className="w-full px-2 py-1 text-sm text-slate-300 hover:bg-slate-700 rounded-t-lg"
+                    >
+                      ×1
+                    </button>
+                    <button
+                      onClick={() => handleQuickSale(10)}
+                      className="w-full px-2 py-1 text-sm text-slate-300 hover:bg-slate-700"
+                    >
+                      ×10
+                    </button>
+                    <button
+                      onClick={() => handleQuickSale(100)}
+                      className="w-full px-2 py-1 text-sm text-slate-300 hover:bg-slate-700"
+                    >
+                      ×100
+                    </button>
+                    <button
+                      onClick={() => handleQuickSale(it.craftCount || 1)}
+                      className="w-full px-2 py-1 text-sm text-slate-300 hover:bg-slate-700 rounded-b-lg"
+                    >
+                      ×{it.craftCount || 1}
+                    </button>
+                  </div>
+                )}
+              </div>
             )}
             
             {/* Comparer */}

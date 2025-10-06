@@ -306,6 +306,7 @@ export default function DashboardModal({ isOpen, onClose, userId, serverId, forg
                 <option value="month">Ce mois</option>
               </select>
             </div>
+            {/* Bouton Reset masqué pour les utilisateurs
             <button
               onClick={handleResetDashboard}
               className="px-3 py-2 bg-red-600 hover:bg-red-700 text-white text-sm rounded-lg transition-colors flex items-center gap-2"
@@ -316,6 +317,7 @@ export default function DashboardModal({ isOpen, onClose, userId, serverId, forg
               </svg>
               Reset
             </button>
+            */}
             <button
               onClick={onClose}
               className="rounded-lg bg-white/10 hover:bg-white/15 border border-white/10 px-3 py-2 text-sm"

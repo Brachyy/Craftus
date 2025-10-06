@@ -12,6 +12,48 @@ const STATS_COLLECTION = 'dashboard_stats';
 export async function addItemToSales(userId, item, serverId) {
   if (!userId) throw new Error('Utilisateur non connecté');
   
+  // Si l'item a déjà les données de vente (venant de la vente rapide)
+  if (item.itemId && item.itemName && item.itemImage) {
+    // Vérifier que itemId n'est pas undefined
+    if (!item.itemId) {
+      console.error('itemId est undefined:', item);
+      throw new Error('itemId est requis pour la vente');
+    }
+    
+    const saleData = {
+      userId,
+      serverId,
+      itemId: item.itemId,
+      itemName: item.itemName,
+      itemImage: item.itemImage,
+      sellPrice: item.sellPrice || 0,
+      investment: item.investment || 0,
+      materialsInvestment: item.materialsInvestment || 0,
+      runeInvestment: item.runeInvestment || 0,
+      gain: item.gain || 0,
+      craftCount: item.craftCount || 1,
+      itemKey: item.itemKey,
+      timestamp: item.timestamp || new Date(),
+      sold: false,
+    };
+    
+    console.log('Données de vente envoyées à Firebase:', saleData); // Debug
+    
+    try {
+      const docRef = await addDoc(collection(db, SALES_COLLECTION), saleData);
+      console.log('Item ajouté en vente:', docRef.id);
+      
+      // Mettre à jour les stats du dashboard
+      await updateDashboardStats(userId, serverId, { ...saleData, saleId: docRef.id });
+      
+      return docRef.id;
+    } catch (error) {
+      console.error('Erreur lors de l\'ajout en vente:', error);
+      throw error;
+    }
+  }
+  
+  // Sinon, traiter comme un item normal (ancien format)
   const saleData = {
     userId,
     serverId,
@@ -24,9 +66,9 @@ export async function addItemToSales(userId, item, serverId) {
     runeInvestment: calculateRuneInvestment(item),
     gain: calculateGain(item),
     craftCount: item.craftCount || 1,
-    itemKey: item.key, // Ajouter la clé pour identifier les items forgemagés
+    itemKey: item.key,
     timestamp: new Date(),
-    sold: false, // false = en vente, true = vendu
+    sold: false,
   };
 
   try {

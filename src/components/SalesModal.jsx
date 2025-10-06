@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { colors } from '../theme/colors';
 import { currency } from '../lib/utils';
 import { getUserSales, markItemAsSold, removeItemFromSales, updateSalePrice } from '../lib/sales';
+import ConfirmationAlert from './ConfirmationAlert';
 
 export default function SalesModal({ isOpen, onClose, userId, serverId, forgemagieItems = new Set() }) {
   const [sales, setSales] = useState([]);
@@ -10,6 +11,11 @@ export default function SalesModal({ isOpen, onClose, userId, serverId, forgemag
   const [editingPrice, setEditingPrice] = useState(null);
   const [newPrice, setNewPrice] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
+  const [confirmationAlert, setConfirmationAlert] = useState({
+    isOpen: false,
+    saleId: null,
+    itemName: ''
+  });
 
   // Charger les items en vente
   useEffect(() => {
@@ -44,8 +50,17 @@ export default function SalesModal({ isOpen, onClose, userId, serverId, forgemag
   };
 
   // Retirer un item de la vente
-  const handleRemoveFromSales = async (saleId) => {
-    if (!confirm('Êtes-vous sûr de vouloir retirer cet item de la vente ?')) return;
+  const handleRemoveFromSales = async (saleId, itemName) => {
+    setConfirmationAlert({
+      isOpen: true,
+      saleId: saleId,
+      itemName: itemName
+    });
+  };
+
+  // Confirmer la suppression
+  const confirmRemoveFromSales = async () => {
+    const { saleId } = confirmationAlert;
     
     try {
       await removeItemFromSales(saleId, userId);
@@ -283,7 +298,7 @@ export default function SalesModal({ isOpen, onClose, userId, serverId, forgemag
                       ✓ Vendu
                     </button>
                     <button
-                      onClick={() => handleRemoveFromSales(sale.id)}
+                      onClick={() => handleRemoveFromSales(sale.id, sale.itemName)}
                       className="flex-1 bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-3 rounded-lg transition-colors text-sm"
                     >
                       🗑️ Retirer
@@ -322,6 +337,18 @@ export default function SalesModal({ isOpen, onClose, userId, serverId, forgemag
           </div>
         )}
       </div>
+
+      {/* Alerte de confirmation */}
+      <ConfirmationAlert
+        isOpen={confirmationAlert.isOpen}
+        onClose={() => setConfirmationAlert({ isOpen: false, saleId: null, itemName: '' })}
+        onConfirm={confirmRemoveFromSales}
+        title="Retirer de la vente"
+        message={`Êtes-vous sûr de vouloir retirer "${confirmationAlert.itemName}" de la vente ?`}
+        confirmText="Retirer"
+        cancelText="Annuler"
+        type="danger"
+      />
     </div>
   );
 }
