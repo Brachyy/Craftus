@@ -826,17 +826,6 @@ export default function App() {
     
     // Propagation automatique vers tous les items qui utilisent le même ingrédient
     propagateIngredientPrice(ingId, val);
-
-    // Incrémenter les participations si l'utilisateur est connecté et renseigne un prix valide
-    if (user && userName && val && val > 0) {
-      try {
-        await updateUserRank(user.uid, userName, 1);
-        // Déclencher le rechargement du rank dans CommunityReward
-        setRankUpdateTrigger(prev => prev + 1);
-      } catch (error) {
-        console.error('Erreur lors de la mise à jour du rang:', error);
-      }
-    }
   };
   const updateSellPrice = async (itemKey, price) => {
     const val = price === "" || price == null ? undefined : Number(price);
@@ -845,17 +834,6 @@ export default function App() {
         it.key !== itemKey ? it : { ...it, sellPrice: val }
       )
     );
-
-    // Incrémenter les participations si l'utilisateur est connecté et renseigne un prix valide
-    if (user && userName && val && val > 0) {
-      try {
-        await updateUserRank(user.uid, userName, 1);
-        // Déclencher le rechargement du rank dans CommunityReward
-        setRankUpdateTrigger(prev => prev + 1);
-      } catch (error) {
-        console.error('Erreur lors de la mise à jour du rang:', error);
-      }
-    }
   };
   const updateCraftCount = (itemKey, count) =>
     setItems((prev) =>
@@ -1096,6 +1074,17 @@ export default function App() {
     try {
       await pushCommunityPrice(PRICE_KIND.ING, ingId, v, auth.currentUser.uid, serverId);
       
+      // Incrémenter les participations seulement si le prix a changé et n'est pas vide/zéro
+      if (user && userName && v && v > 0 && (previousValue === undefined || v !== previousValue)) {
+        try {
+          await updateUserRank(user.uid, userName, 1);
+          // Déclencher le rechargement du rank dans CommunityReward
+          setRankUpdateTrigger(prev => prev + 1);
+        } catch (error) {
+          console.error('Erreur lors de la mise à jour du rang:', error);
+        }
+      }
+      
       // Déclencher un rechargement des données communautaires
       setTimeout(() => {
         triggerRefresh();
@@ -1122,6 +1111,17 @@ export default function App() {
     
     try {
       await pushCommunityPrice(PRICE_KIND.SELL, it.ankamaId, v, auth.currentUser.uid, serverId);
+      
+      // Incrémenter les participations seulement si le prix a changé et n'est pas vide/zéro
+      if (user && userName && v && v > 0 && (previousValue === undefined || v !== previousValue)) {
+        try {
+          await updateUserRank(user.uid, userName, 1);
+          // Déclencher le rechargement du rank dans CommunityReward
+          setRankUpdateTrigger(prev => prev + 1);
+        } catch (error) {
+          console.error('Erreur lors de la mise à jour du rang:', error);
+        }
+      }
       
       // Déclencher un rechargement des données communautaires
       setTimeout(() => {

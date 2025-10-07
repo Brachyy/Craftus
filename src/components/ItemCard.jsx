@@ -185,18 +185,20 @@ export default function ItemCard({
   const gain = revenueNet - investment;
   const coeff = investment > 0 ? revenueNet / investment : null;
 
-  // Sélectionne tout au focus clavier; au clic souris, laisse le caret où il est
+  // Sélectionne tout le texte au focus (comportement standard des inputs)
   const handleFocus = (e) => {
-    // Utiliser une approche plus simple : ne sélectionner que si c'est un focus programmatique
-    // ou si l'utilisateur utilise Tab pour naviguer
-    const isKeyboardNavigation = e.detail === 0 && (
-      e.nativeEvent?.isTrusted === false || // Focus programmatique
-      e.target.matches(':focus-visible') // Focus visible (clavier)
-    );
-    
-    if (isKeyboardNavigation) {
-      requestAnimationFrame(() => e.target.select());
-    }
+    // Utiliser requestAnimationFrame pour une meilleure synchronisation avec le DOM
+    requestAnimationFrame(() => {
+      // Double vérification pour éviter les bugs
+      if (document.activeElement === e.target && e.target === document.activeElement) {
+        try {
+          e.target.select();
+        } catch (error) {
+          // Ignorer les erreurs de sélection (peuvent arriver si l'input est détruit)
+          console.warn('Erreur lors de la sélection:', error);
+        }
+      }
+    });
   };
 
   // Vérifier si l'item a un investissement en runes ou est marqué pour la forgemagie

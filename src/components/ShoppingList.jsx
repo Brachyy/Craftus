@@ -208,7 +208,16 @@ export default function ShoppingList({
     } else {
       // Commit pour les ingrédients normaux
       const it = items.find((it) => it.ingredients.some((x) => x.ankamaId === ingId));
-      if (it) onCommitIngredientPrice?.(it.key, ingId, previousValue);
+      if (it) {
+        const ing = it.ingredients.find((x) => x.ankamaId === ingId);
+        if (ing) {
+          const currentPrice = Number(ing.unitPrice);
+          // Incrémenter les participations seulement si le prix a changé et n'est pas vide/zéro
+          if (currentPrice && currentPrice > 0 && (previousValue === undefined || currentPrice !== previousValue)) {
+            onCommitIngredientPrice?.(it.key, ingId, previousValue);
+          }
+        }
+      }
     }
   };
 
@@ -235,18 +244,20 @@ export default function ShoppingList({
     commitOnce(ingId);
   };
 
-  // util pour sélectionner tout le contenu au focus
+  // util pour sélectionner tout le contenu au focus (comportement standard des inputs)
   const handleFocus = (e) => {
-    // Utiliser une approche plus simple : ne sélectionner que si c'est un focus programmatique
-    // ou si l'utilisateur utilise Tab pour naviguer
-    const isKeyboardNavigation = e.detail === 0 && (
-      e.nativeEvent?.isTrusted === false || // Focus programmatique
-      e.target.matches(':focus-visible') // Focus visible (clavier)
-    );
-    
-    if (isKeyboardNavigation) {
-      requestAnimationFrame(() => e.target.select());
-    }
+    // Utiliser requestAnimationFrame pour une meilleure synchronisation avec le DOM
+    requestAnimationFrame(() => {
+      // Double vérification pour éviter les bugs
+      if (document.activeElement === e.target && e.target === document.activeElement) {
+        try {
+          e.target.select();
+        } catch (error) {
+          // Ignorer les erreurs de sélection (peuvent arriver si l'input est détruit)
+          console.warn('Erreur lors de la sélection:', error);
+        }
+      }
+    });
   };
 
   // Fonction pour obtenir les classes Tailwind CSS basées sur la fluctuation
