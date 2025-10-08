@@ -328,13 +328,11 @@ export default function CommunityReward({ user, userName }) {
         setTodayUsers(userIds.size);
         setUserContribution(userContributions);
         
-        // Charger le rang de l'utilisateur
-        if (userContributions > 0) {
-          const rankData = await getUserRankData(user.uid);
-          if (rankData) {
-            const rank = getUserRank(rankData.monthlyParticipations);
-            setUserRank(rank);
-          }
+        // Charger le rang de l'utilisateur (même avec 0 participation)
+        const rankData = await getUserRankData(user.uid);
+        if (rankData) {
+          const rank = getUserRank(rankData.monthlyParticipations);
+          setUserRank(rank);
         }
       } catch (error) {
         console.error('Erreur lors du chargement des statistiques:', error);
@@ -643,18 +641,28 @@ export default function CommunityReward({ user, userName }) {
                   ! <span className="text-slate-300">{userRank.message}</span>
                 </span>
               ) : (
-                `Bravo ${userName || 'utilisateur'} ! Vous faites partie des ${todayUsers} utilisateurs qui ont aidé la communauté aujourd'hui`
+                `Bonjour ${userName || 'utilisateur'} ! Vous faites partie des ${todayUsers} utilisateurs qui ont aidé la communauté aujourd'hui`
               )}
             </h3>
             
             <p className="text-slate-300 text-sm mb-3">
               {userContribution > 0 ? (
                 <>
-                  Vous avez renseigné <span className="text-yellow-400 font-semibold">{userContribution}</span> prix aujourd'hui. Merci pour votre contribution !
+                  Vous avez renseigné <span className="text-yellow-400 font-semibold">{userContribution}</span> prix aujourd'hui. 
+                  <br />
+                  <span className="text-slate-400 text-xs">
+                    Vous faites partie des <span className="text-yellow-400 font-semibold">{todayUsers}</span> contributeurs qui ont aidé la communauté aujourd'hui.
+                  </span>
+                  <br />
+                  Merci pour votre contribution !
                 </>
               ) : (
                 <>
                   Bienvenue dans la communauté Craftus ! Commencez à contribuer en ajoutant des prix pour aider les autres joueurs.
+                  <br />
+                  <span className="text-slate-400 text-xs">
+                    <span className="text-yellow-400 font-semibold">{todayUsers}</span> utilisateurs ont déjà participé aujourd'hui.
+                  </span>
                 </>
               )}
             </p>
