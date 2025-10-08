@@ -1,0 +1,34 @@
+{
+  "name": "craftus-seo-config",
+  "version": "1.0.0",
+  "description": "Configuration SEO pour Craftus - Comparateur de Prix Dofus",
+  "keywords": [
+    "craftus",
+    "comparateur prix dofus",
+    "calculateur craft dofus",
+    "profit craft",
+    "prix objets dofus",
+    "recettes dofus",
+    "calcul profit",
+    "dofusdb",
+    "optimisation craft",
+    "rentabilité dofus",
+    "prix communautaires",
+    "liste courses craft"
+  ],
+  "seo": {
+    "title": "Craftus - Comparateur de Prix Dofus | Calculateur de Profit Craft",
+    "description": "Craftus est le meilleur comparateur de prix pour Dofus. Calculez vos profits de craft, comparez les prix des objets et optimisez vos recettes. Gratuit et sans inscription.",
+    "canonical": "https://craftus.fr",
+    "og_title": "Craftus - Comparateur de Prix Dofus",
+    "og_description": "Le meilleur comparateur de prix pour Dofus. Calculez vos profits de craft et optimisez vos recettes gratuitement.",
+    "twitter_title": "Craftus - Comparateur de Prix Dofus",
+    "twitter_description": "Le meilleur comparateur de prix pour Dofus. Calculez vos profits de craft gratuitement."
+  },
+  "performance": {
+    "lazy_loading": true,
+    "image_optimization": true,
+    "minification": true,
+    "compression": true
+  }
+}

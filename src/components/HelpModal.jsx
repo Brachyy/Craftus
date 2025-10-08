@@ -31,8 +31,8 @@ function HelpModal({ isOpen, onClose }) {
                 📚
               </div>
               <div>
-                <h2 className="text-2xl font-bold">Guide Craftus</h2>
-                <p className="text-emerald-100 text-sm">Maîtrisez l'art du craft rentable</p>
+                <h2 className="text-2xl font-bold">Guide Craftus - Comparateur de Prix Dofus</h2>
+                <p className="text-emerald-100 text-sm">Maîtrisez l'art du craft rentable avec le meilleur calculateur de profit Dofus</p>
               </div>
             </div>
             <button
@@ -81,25 +81,25 @@ function HelpModal({ isOpen, onClose }) {
                     <div className="w-20 h-20 bg-gradient-to-r from-emerald-500 to-blue-500 rounded-full flex items-center justify-center text-4xl mx-auto mb-4">
                       🎯
                     </div>
-                    <h3 className="text-2xl font-bold text-white mb-2">Bienvenue sur Craftus !</h3>
-                    <p className="text-slate-400">Votre assistant personnel pour le craft rentable dans Dofus</p>
+                    <h3 className="text-2xl font-bold text-white mb-2">Bienvenue sur Craftus - Comparateur de Prix Dofus !</h3>
+                    <p className="text-slate-400">Le meilleur calculateur de profit craft pour Dofus. Comparez les prix des objets et optimisez vos recettes gratuitement.</p>
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     <div className="bg-gradient-to-br from-emerald-500/20 to-emerald-600/20 p-6 rounded-xl border border-emerald-500/30">
                       <div className="text-3xl mb-3">💰</div>
-                      <h4 className="text-lg font-semibold text-white mb-2">Calculs Automatiques</h4>
-                      <p className="text-slate-300 text-sm">Coûts, profits et rentabilité calculés instantanément</p>
+                      <h4 className="text-lg font-semibold text-white mb-2">Calculateur de Profit Craft</h4>
+                      <p className="text-slate-300 text-sm">Coûts, profits et rentabilité calculés automatiquement avec les prix communautaires Dofus</p>
                     </div>
                     <div className="bg-gradient-to-br from-blue-500/20 to-blue-600/20 p-6 rounded-xl border border-blue-500/30">
                       <div className="text-3xl mb-3">📊</div>
-                      <h4 className="text-lg font-semibold text-white mb-2">Comparaison Intelligente</h4>
-                      <p className="text-slate-300 text-sm">Comparez jusqu'à 20 items simultanément</p>
+                      <h4 className="text-lg font-semibold text-white mb-2">Comparateur de Prix Dofus</h4>
+                      <p className="text-slate-300 text-sm">Comparez jusqu'à 20 objets Dofus simultanément pour optimiser vos crafts</p>
                     </div>
                     <div className="bg-gradient-to-br from-purple-500/20 to-purple-600/20 p-6 rounded-xl border border-purple-500/30">
                       <div className="text-3xl mb-3">🌐</div>
-                      <h4 className="text-lg font-semibold text-white mb-2">Prix Communautaires</h4>
-                      <p className="text-slate-300 text-sm">Données partagées par la communauté Dofus</p>
+                      <h4 className="text-lg font-semibold text-white mb-2">Prix Communautaires Dofus</h4>
+                      <p className="text-slate-300 text-sm">Données de prix partagées par la communauté Dofus pour des calculs précis</p>
                     </div>
                   </div>
 
@@ -253,16 +253,16 @@ function HelpModal({ isOpen, onClose }) {
                     <div className="w-20 h-20 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-full flex items-center justify-center text-4xl mx-auto mb-4">
                       🔍
                     </div>
-                    <h3 className="text-2xl font-bold text-white mb-2">Recherche d'items</h3>
-                    <p className="text-slate-400">Trouvez et ajoutez vos items facilement</p>
+                    <h3 className="text-2xl font-bold text-white mb-2">Recherche d'objets Dofus</h3>
+                    <p className="text-slate-400">Trouvez et ajoutez vos objets Dofus facilement pour calculer la rentabilité</p>
               </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="bg-gradient-to-br from-emerald-500/20 to-emerald-600/20 p-6 rounded-xl border border-emerald-500/30">
                       <div className="text-3xl mb-3">📝</div>
-                      <h4 className="text-lg font-semibold text-white mb-3">1. Tapez le nom</h4>
+                      <h4 className="text-lg font-semibold text-white mb-3">1. Tapez le nom de l'objet</h4>
                       <p className="text-slate-300 text-sm mb-3">
-                        Commencez à taper le nom d'un item (minimum 2 caractères)
+                        Commencez à taper le nom d'un objet Dofus (minimum 2 caractères)
                       </p>
                       <div className="bg-slate-800/50 p-3 rounded-lg">
                         <div className="text-xs text-slate-400 mb-1">Exemple :</div>
@@ -625,8 +625,8 @@ function HelpModal({ isOpen, onClose }) {
                     <div className="w-20 h-20 bg-gradient-to-r from-green-500 to-emerald-500 rounded-full flex items-center justify-center text-4xl mx-auto mb-4">
                       💰
                     </div>
-                    <h3 className="text-2xl font-bold text-white mb-2">Gestion des prix</h3>
-                    <p className="text-slate-400">Ajustez et comprenez les prix</p>
+                    <h3 className="text-2xl font-bold text-white mb-2">Gestion des prix Dofus</h3>
+                    <p className="text-slate-400">Ajustez et comprenez les prix communautaires pour optimiser vos crafts</p>
                   </div>
 
                   <div className="space-y-6">
@@ -634,9 +634,9 @@ function HelpModal({ isOpen, onClose }) {
                       <div className="flex items-start gap-4">
                         <div className="text-3xl">📈</div>
                         <div>
-                          <h4 className="text-xl font-semibold text-white mb-3">Prix de vente</h4>
+                          <h4 className="text-xl font-semibold text-white mb-3">Prix de vente des objets Dofus</h4>
                           <p className="text-slate-300 mb-4">
-                            Modifiez le prix de vente selon votre marché local. Les prix communautaires sont automatiquement pré-remplis.
+                            Modifiez le prix de vente selon votre marché local. Les prix communautaires Dofus sont automatiquement pré-remplis.
                           </p>
                           <div className="bg-slate-800/50 p-4 rounded-lg">
                             <p className="text-sm text-slate-400 mb-2">💡 Conseil :</p>
@@ -691,16 +691,16 @@ function HelpModal({ isOpen, onClose }) {
                     <div className="w-20 h-20 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full flex items-center justify-center text-4xl mx-auto mb-4">
                       📊
                     </div>
-                    <h3 className="text-2xl font-bold text-white mb-2">Analyse de rentabilité</h3>
-                    <p className="text-slate-400">Comprenez vos calculs</p>
+                    <h3 className="text-2xl font-bold text-white mb-2">Analyse de rentabilité craft Dofus</h3>
+                    <p className="text-slate-400">Comprenez vos calculs de profit et optimisez vos recettes</p>
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="bg-gradient-to-br from-emerald-500/20 to-emerald-600/20 p-6 rounded-xl border border-emerald-500/30">
                       <div className="text-3xl mb-3">💰</div>
-                      <h4 className="text-lg font-semibold text-white mb-3">Investissement</h4>
+                      <h4 className="text-lg font-semibold text-white mb-3">Investissement craft</h4>
                       <p className="text-slate-300 text-sm mb-3">
-                        Somme des coûts de tous les ingrédients nécessaires pour crafter l'item.
+                        Somme des coûts de tous les ingrédients nécessaires pour crafter l'objet Dofus.
                       </p>
                       <div className="bg-slate-800/50 p-3 rounded-lg">
                         <div className="text-xs text-slate-400 mb-1">Formule :</div>

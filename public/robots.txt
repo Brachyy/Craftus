@@ -1,0 +1,25 @@
+User-agent: *
+Allow: /
+
+# Sitemap
+Sitemap: https://craftus-dof.vercel.app/sitemap.xml
+
+# Crawl-delay pour éviter la surcharge
+Crawl-delay: 1
+
+# Bloquer les fichiers non nécessaires
+Disallow: /src/
+Disallow: /node_modules/
+Disallow: /*.json$
+Disallow: /firebase.json
+Disallow: /firestore.*
+Disallow: /vite.config.js
+Disallow: /eslint.config.js
+Disallow: /package*.json
+Disallow: /README.md
+Disallow: /CGU.md
+Disallow: /ADBLOCK_GUIDE.md
+
+# Autoriser les assets
+Allow: /assets/
+Allow: /dist/

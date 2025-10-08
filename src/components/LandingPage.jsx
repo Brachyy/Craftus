@@ -15,7 +15,7 @@ export default function LandingPage({ onGetStarted }) {
               animate={{ opacity: 1, y: 0 }}
               className="text-4xl md:text-6xl font-bold text-white mb-6"
             >
-              Optimise tes <span className="text-emerald-400">Crafts</span> Dofus
+              Craftus - <span className="text-emerald-400">Comparateur de Prix Dofus</span>
             </motion.h1>
             
             <motion.p 
@@ -24,8 +24,8 @@ export default function LandingPage({ onGetStarted }) {
               transition={{ delay: 0.2 }}
               className="text-xl text-slate-300 mb-8 max-w-3xl mx-auto"
             >
-              Calcule la rentabilité de tes crafts en 30 secondes. 
-              Plus d'utilisateurs = prix plus fiables grâce à la communauté.
+              Le meilleur calculateur de profit craft pour Dofus. Comparez les prix des objets, 
+              calculez la rentabilité de vos recettes et optimisez vos crafts gratuitement.
             </motion.p>
             
             <motion.div
@@ -66,7 +66,7 @@ export default function LandingPage({ onGetStarted }) {
       <section className="py-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <h2 className="text-3xl font-bold text-center text-white mb-12">
-            Pourquoi Choisir Craftus ?
+            Pourquoi Choisir Craftus - Comparateur de Prix Dofus ?
           </h2>
           
           <div className="grid md:grid-cols-3 gap-8">
@@ -76,9 +76,9 @@ export default function LandingPage({ onGetStarted }) {
               className={`${colors.panel} rounded-xl border ${colors.border} p-6 text-center`}
             >
               <div className="text-4xl mb-4">📊</div>
-              <h3 className="text-xl font-semibold text-white mb-3">Calculs Automatiques</h3>
+              <h3 className="text-xl font-semibold text-white mb-3">Calculateur de Profit Craft</h3>
               <p className="text-slate-300">
-                Rentabilité, taxes, profits... Tout calculé automatiquement avec les derniers prix communautaires.
+                Rentabilité, taxes, profits... Tout calculé automatiquement avec les derniers prix communautaires Dofus.
               </p>
             </motion.div>
             

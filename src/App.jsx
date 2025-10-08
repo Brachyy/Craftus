@@ -1297,7 +1297,21 @@ export default function App() {
   }
 
   return (
-    <div className={`${colors.bg} text-slate-100 min-h-screen p-4 md:p-6`}>
+    <>
+      {/* SEO Headers */}
+      <header style={{ display: 'none' }}>
+        <h1>Craftus - Comparateur de Prix Dofus | Calculateur de Profit Craft</h1>
+        <h2>Comparateur de prix Dofus gratuit</h2>
+        <h3>Calculateur de profit craft Dofus</h3>
+        <h4>Optimisation de recettes Dofus</h4>
+        <h5>Prix communautaires Dofus</h5>
+        <h6>Liste de courses craft Dofus</h6>
+        <p>Craftus est le meilleur comparateur de prix pour Dofus. Calculez vos profits de craft, comparez les prix des objets et optimisez vos recettes gratuitement. Utilisez notre calculateur de rentabilité craft pour maximiser vos profits dans Dofus.</p>
+        <p>Notre comparateur de prix Dofus vous permet de calculer la rentabilité de vos crafts en temps réel. Comparez les prix des objets Dofus et optimisez vos recettes avec les données communautaires les plus récentes.</p>
+        <p>Le calculateur de profit craft Dofus de Craftus analyse automatiquement vos recettes et calcule les coûts, profits et rentabilité. Optimisez vos crafts Dofus avec notre outil gratuit.</p>
+      </header>
+      
+      <div className={`${colors.bg} text-slate-100 min-h-screen p-4 md:p-6`}>
       {/* Détecteur de bloqueur de pub */}
       <AdBlockDetector 
         onAdBlockDetected={handleAdBlockDetected}
@@ -1740,6 +1754,7 @@ export default function App() {
         onClose={handleCloseRankCongratulation}
       />
       
-    </div>
+      </div>
+    </>
   );
 }
